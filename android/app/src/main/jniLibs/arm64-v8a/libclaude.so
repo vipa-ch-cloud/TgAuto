@@ -1,0 +1,28 @@
+#!/system/bin/sh
+# TeleScript: a `claude` stand-in. Each call is handed to the app through a spool
+# directory; the app runs the real Claude Code in Termux (com.termux.RUN_COMMAND)
+# and writes back stdout, stderr and the exit code.
+spool="${0%/*}/../spool"
+mkdir -p "$spool" || exit 127
+req="$spool/$$-$RANDOM"
+mkdir "$req.tmp" || exit 127
+i=0
+for a in "$@"; do printf '%s' "$a" > "$req.tmp/arg.$i"; i=$((i+1)); done
+echo "$i" > "$req.tmp/argc"
+cat > "$req.tmp/stdin"
+mv "$req.tmp" "$req.req" || exit 127
+n=0
+while [ ! -f "$req.req/done" ]; do
+  sleep 1
+  n=$((n+1))
+  if [ "$n" -gt 600 ]; then
+    echo "TeleScript: нет ответа от Termux" >&2
+    rm -rf "$req.req"
+    exit 124
+  fi
+done
+cat "$req.req/stderr" >&2 2>/dev/null
+cat "$req.req/stdout" 2>/dev/null
+code=$(cat "$req.req/exit" 2>/dev/null)
+rm -rf "$req.req"
+exit "${code:-1}"

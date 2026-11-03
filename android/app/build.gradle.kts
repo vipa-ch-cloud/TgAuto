@@ -45,6 +45,12 @@ android {
         compose = true
         buildConfig = true
     }
+    packaging {
+        // The `claude` shim (jniLibs/*/libclaude.so, a shell script) must be extracted to
+        // nativeLibraryDir: the only app location Android lets us execute files from.
+        jniLibs.useLegacyPackaging = true
+        jniLibs.keepDebugSymbols += "**/libclaude.so"
+    }
     sourceSets {
         getByName("main") {
             assets.directories.add(scriptAssetsDir.get().asFile.path)

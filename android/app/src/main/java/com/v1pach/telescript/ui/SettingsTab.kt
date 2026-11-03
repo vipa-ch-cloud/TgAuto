@@ -17,6 +17,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.text.selection.SelectionContainer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,8 +32,6 @@ import org.json.JSONObject
 @Composable
 fun SettingsTab() {
     val context = LocalContext.current
-    val key by AppSettings.anthropicKey.flow.collectAsStateWithLifecycle()
-    val model by AppSettings.model.flow.collectAsStateWithLifecycle()
     val themeMode by AppSettings.themeMode.flow.collectAsStateWithLifecycle()
     val dynamicColor by AppSettings.dynamicColor.flow.collectAsStateWithLifecycle()
     val palette by AppSettings.palette.flow.collectAsStateWithLifecycle()
@@ -45,15 +49,7 @@ fun SettingsTab() {
     ) {
         TabHeader("Настройки")
 
-        AppSectionCard {
-            SectionHeader(Icons.Default.AutoAwesome, "Anthropic API")
-            AppTextField(key, { AppSettings.anthropicKey.set(it.trim()) }, "API-ключ", secret = true,
-                placeholder = "sk-ant-…")
-            AppTextField(model, { AppSettings.model.set(it.trim()) }, "Модель",
-                placeholder = "по умолчанию из конфига скрипта",
-                supporting = "Передаётся скриптам как ANTHROPIC_MODEL и записывается в поле «model» конфига")
-            Hint("Ключ передаётся скриптам в переменной ANTHROPIC_API_KEY и хранится только на телефоне.")
-        }
+        LlmCard()
 
         ConfigEditorCard()
 
@@ -193,4 +189,131 @@ private fun readConfig(script: ScriptInfo): String =
 private fun validateJson(text: String): String? {
     if (text.isBlank()) return null
     return try { JSONObject(text); null } catch (e: Exception) { "Ошибка JSON: ${e.message}" }
+}
+
+@Composable
+private fun LlmCard() {
+    val context = LocalContext.current
+    val backend by AppSettings.llmBackend.flow.collectAsStateWithLifecycle()
+    val key by AppSettings.anthropicKey.flow.collectAsStateWithLifecycle()
+    val model by AppSettings.model.flow.collectAsStateWithLifecycle()
+    val command by AppSettings.termuxCommand.flow.collectAsStateWithLifecycle()
+    var installed by remember { mutableStateOf(LlmBridge.termuxInstalled()) }
+    var granted by remember { mutableStateOf(LlmBridge.hasPermission()) }
+    var testing by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<LlmBridge.Result?>(null) }
+    var showSteps by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        granted = LlmBridge.hasPermission()
+        if (!granted) toast(context, "Разрешение не выдано. Его можно включить в настройках приложения → Разрешения")
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        installed = LlmBridge.termuxInstalled()
+        granted = LlmBridge.hasPermission()
+    }
+
+    AppSectionCard {
+        SectionHeader(Icons.Default.AutoAwesome, "LLM")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ChoiceButton("Claude-аккаунт (Termux)", backend == "termux", Modifier.weight(1.4f)) {
+                AppSettings.llmBackend.set("termux")
+            }
+            ChoiceButton("API-ключ", backend == "api", Modifier.weight(1f)) { AppSettings.llmBackend.set("api") }
+        }
+
+        if (backend == "termux") {
+            Hint("Скрипты вызывают настоящий Claude Code, установленный и авторизованный в Termux. " +
+                "Запросы идут через ваш аккаунт Claude (Pro/Max), ключ не нужен. " +
+                "Команда запускается без инструментов, MCP и сохранения сессий.")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                StatusPill(if (installed) "Termux установлен" else "Termux не найден",
+                    if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                StatusPill(if (granted) "Доступ есть" else "Нет доступа",
+                    if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+            }
+            if (installed && !granted) {
+                BigButton("Разрешить запуск команд в Termux", Icons.Default.Key,
+                    onClick = { permission.launch(LlmBridge.PERMISSION) })
+            }
+            AppTextField(command, { AppSettings.termuxCommand.set(it) }, "Команда в Termux",
+                placeholder = "claude",
+                supporting = "Для proot Ubuntu: proot-distro login ubuntu -- claude")
+            BigButton("Проверить", Icons.Default.PlayArrow, loading = testing, enabled = installed && granted, onClick = {
+                testing = true
+                testResult = null
+                scope.launch {
+                    val args = buildList {
+                        add("-p")
+                        if (model.isNotBlank()) { add("--model"); add(model) }
+                        addAll(LlmBridge.TOOLLESS)
+                    }
+                    testResult = withContext(Dispatchers.IO) { LlmBridge.run(args, "ответь одним словом: ок", 120) }
+                    testing = false
+                }
+            })
+            testResult?.let { r ->
+                val ok = r.exitCode == 0 && r.stdout.isNotBlank()
+                StatusPill(if (ok) "Работает" else "Ошибка (код ${r.exitCode})",
+                    if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                val text = listOf(r.stdout.trim(), r.stderr.trim()).filter { it.isNotEmpty() }.joinToString("\n")
+                    .ifEmpty { "(пустой ответ)" }.take(1500)
+                SelectionContainer {
+                    Text(text, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
+                        color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+            TextButton(onClick = { showSteps = !showSteps }) {
+                Text(if (showSteps) "Скрыть инструкцию" else "Как настроить Termux")
+            }
+            if (showSteps) TermuxSteps()
+        } else {
+            AppTextField(key, { AppSettings.anthropicKey.set(it.trim()) }, "API-ключ", secret = true,
+                placeholder = "sk-ant-…")
+            Hint("Ключ передаётся скриптам в переменной ANTHROPIC_API_KEY и хранится только на телефоне.")
+        }
+        AppTextField(model, { AppSettings.model.set(it.trim()) }, "Модель",
+            placeholder = "по умолчанию из конфига скрипта",
+            supporting = "Передаётся скриптам как ANTHROPIC_MODEL и записывается в поле «model» конфига")
+        Hint("Изменения применяются при следующем запуске скрипта.")
+    }
+}
+
+@Composable
+private fun TermuxSteps() {
+    val steps = listOf(
+        "Установите Termux из F-Droid или с GitHub (termux/termux-app, версия 0.118+). " +
+            "Сборка из Google Play устарела и не смешивается с ними." to null,
+        "В Termux установите Node.js:" to "pkg update && pkg install nodejs",
+        "Установите Claude Code. Новые версии npm-пакета (2.1.113 и выше) в Termux не запускаются " +
+            "(нет нативной сборки для Android), поэтому нужна 2.1.112 с отключённым автообновлением:" to
+            "DISABLE_AUTOUPDATER=1 npm i -g @anthropic-ai/claude-code@2.1.112\n" +
+            "mkdir -p ~/.claude && echo '{\"env\":{\"DISABLE_AUTOUPDATER\":\"1\"}}' > ~/.claude/settings.json",
+        "Альтернатива — свежая версия в Ubuntu через proot (тогда в поле «Команда в Termux» укажите " +
+            "proot-distro login ubuntu -- claude):" to
+            "pkg install proot-distro && proot-distro install ubuntu\n" +
+            "proot-distro login ubuntu -- bash -c 'apt update && apt install -y curl && curl -fsSL https://claude.ai/install.sh | bash'",
+        "Запустите claude и войдите: откройте ссылку в браузере, войдите в аккаунт Claude (Pro/Max) " +
+            "и вставьте код обратно в Termux. Затем выйдите (/exit)." to "claude",
+        "Разрешите другим приложениям запускать команды в Termux:" to
+            "mkdir -p ~/.termux && echo 'allow-external-apps=true' >> ~/.termux/termux.properties\ntermux-reload-settings",
+        "Нажмите выше «Разрешить запуск команд в Termux» (или: Настройки Android → Приложения → TeleScript → " +
+            "Разрешения → Дополнительные → «Выполнение команд в Termux»)." to null,
+        "Отключите оптимизацию батареи для Termux, затем нажмите «Проверить» — должен прийти ответ «ок»." to null,
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        steps.forEachIndexed { i, (text, code) ->
+            Text("${i + 1}. $text", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            if (code != null) {
+                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth()) {
+                    SelectionContainer {
+                        Text(code, Modifier.padding(10.dp),
+                            style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
 }

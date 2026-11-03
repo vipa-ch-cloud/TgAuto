@@ -55,6 +55,10 @@ object Paths {
     val sessionFile get() = File(data, "account.session")
     /** Libraries downloaded at runtime by ts_pip; first on sys.path for every script. */
     val sitePackages get() = File(root, "site-packages-user")
+    /** Where the `claude` shim is linked: on PATH and at automod's ~/.local/bin fallback. */
+    val llmBin get() = File(root, ".local/bin")
+    /** Requests from the shim to LlmBridge (the shim finds it as $0/../spool). */
+    val llmSpool get() = File(root, ".local/spool")
 }
 
 /**
@@ -425,7 +429,12 @@ object ScriptManager {
             env.put("${prefix}_$k", v)
         }
         env.put("TELESCRIPT_SCRIPT_ID", script.id)
-        env.put("ANTHROPIC_API_KEY", AppSettings.anthropicKey.value.trim())
+        // LLM: the Claude account in Termux (the `claude` shim) or an API key.
+        val viaTermux = AppSettings.llmBackend.value == "termux"
+        LlmBridge.setup(viaTermux)
+        val basePath = System.getenv("PATH") ?: "/system/bin"
+        env.put("PATH", if (viaTermux) "${Paths.llmBin.absolutePath}:$basePath" else basePath)
+        env.put("ANTHROPIC_API_KEY", if (viaTermux) "" else AppSettings.anthropicKey.value.trim())
         if (model.isNotEmpty()) env.put("ANTHROPIC_MODEL", model)
         env.put("HOME", Paths.root.absolutePath)
         env.put("TELESCRIPT_SITE_PACKAGES", Paths.sitePackages.absolutePath)

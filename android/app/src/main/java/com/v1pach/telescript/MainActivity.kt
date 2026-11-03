@@ -57,15 +57,19 @@ import kotlin.math.min
 import kotlin.math.sin
 
 class MainActivity : ComponentActivity() {
-    private val notificationPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    private val startupPermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        val wanted = buildList {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
+            // Claude account mode needs to run Claude Code in Termux.
+            if (AppSettings.llmBackend.value == "termux" && LlmBridge.termuxInstalled() && !LlmBridge.hasPermission())
+                add(LlmBridge.PERMISSION)
         }
+        if (wanted.isNotEmpty()) startupPermissions.launch(wanted.toTypedArray())
         setContent {
             val themeMode by AppSettings.themeMode.flow.collectAsStateWithLifecycle()
             val dynamicColor by AppSettings.dynamicColor.flow.collectAsStateWithLifecycle()

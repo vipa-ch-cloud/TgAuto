@@ -58,6 +58,8 @@ object AppSettings {
     val scriptsTree = Pref("scripts_tree", "")
 
     // LLM
+    val llmBackend = Pref("llm_backend", "termux") // termux (Claude account via Claude Code) | api
+    val termuxCommand = Pref("termux_command", "claude")
     val anthropicKey = Pref("anthropic_key", "")
     val model = Pref("model", "")
 
