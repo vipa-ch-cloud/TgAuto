@@ -1,0 +1,11 @@
+# automod is maintained separately; the build copies it as a template
+scripts/
+__pycache__/
+*.pyc
+android/.gradle/
+android/build/
+android/app/build/
+android/.kotlin/
+android/local.properties
+android/.idea/
+*.iml
