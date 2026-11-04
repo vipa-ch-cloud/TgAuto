@@ -20,3 +20,7 @@ proxy.json
 keystore.properties
 # scripts live in a separate repo
 scripts-repo-staging/
+
+# built APKs are released via GitHub Releases, not committed
+dist/
+*.apk
