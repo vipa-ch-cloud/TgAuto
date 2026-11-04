@@ -41,7 +41,7 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
     val tree by AppSettings.scriptsTree.flow.collectAsStateWithLifecycle()
     val states by ScriptManager.states.collectAsStateWithLifecycle()
     val installing by LibManager.installing.collectAsStateWithLifecycle()
-    var confirmTemplate by remember { mutableStateOf(false) }
+    var confirmTemplate by remember { mutableStateOf("") }
     var batteryOk by remember { mutableStateOf(isIgnoringBattery(context)) }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
@@ -55,12 +55,12 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
         rescan()
     }
 
-    fun addTemplate(overwrite: Boolean) = Thread({
-        val error = ScriptRepository.addTemplate("automod", overwrite)
+    fun addTemplate(name: String, overwrite: Boolean) = Thread({
+        val error = ScriptRepository.addTemplate(name, overwrite)
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             when (error) {
-                null -> { toast(context, "Пример automod добавлен в папку"); rescan() }
-                "EXISTS" -> confirmTemplate = true
+                null -> { toast(context, "Пример $name добавлен в папку"); rescan() }
+                "EXISTS" -> confirmTemplate = name
                 else -> toast(context, error)
             }
         }
@@ -93,10 +93,12 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     BigButton(if (tree.isEmpty()) "Выбрать папку" else "Сменить папку", Icons.Default.Folder,
                         onClick = { picker.launch(null) }, modifier = Modifier.weight(1f))
-                    BigButton("Пример", Icons.Default.Add, onClick = { addTemplate(false) },
+                    BigButton("Пример: automod", Icons.Default.Add, onClick = { addTemplate("automod", false) },
                         modifier = Modifier.weight(1f), enabled = tree.isNotEmpty() && problem.isEmpty())
                 }
-                if (tree.isNotEmpty()) Hint("«Пример» копирует automod (automod.py + README.md) в выбранную папку.")
+                BigButton("Пример: автоответчик", Icons.Default.Add, onClick = { addTemplate("autoresponder", false) },
+                    modifier = Modifier.fillMaxWidth(), enabled = tree.isNotEmpty() && problem.isEmpty())
+                if (tree.isNotEmpty()) Hint("Примеры копируют automod или autoresponder (.py + README.md) в выбранную папку.")
             }
         }
         if (!batteryOk) item {
@@ -136,13 +138,13 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
         }
     }
 
-    if (confirmTemplate) {
+    if (confirmTemplate.isNotEmpty()) {
         AlertDialog(
-            onDismissRequest = { confirmTemplate = false },
-            title = { Text("Папка automod уже есть") },
-            text = { Text("Перезаписать automod.py и README.md версией из приложения? Другие файлы в папке не тронуты.") },
-            confirmButton = { TextButton(onClick = { confirmTemplate = false; addTemplate(true) }) { Text("Перезаписать") } },
-            dismissButton = { TextButton(onClick = { confirmTemplate = false }) { Text("Отмена") } }
+            onDismissRequest = { confirmTemplate = "" },
+            title = { Text("Папка $confirmTemplate уже есть") },
+            text = { Text("Перезаписать $confirmTemplate.py и README.md версией из приложения? Другие файлы в папке не тронуты.") },
+            confirmButton = { TextButton(onClick = { val n = confirmTemplate; confirmTemplate = ""; addTemplate(n, true) }) { Text("Перезаписать") } },
+            dismissButton = { TextButton(onClick = { confirmTemplate = "" }) { Text("Отмена") } }
         )
     }
 }

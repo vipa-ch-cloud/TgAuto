@@ -10,8 +10,9 @@ val scriptAssetsDir = layout.buildDirectory.dir("generated/scriptAssets")
 val bundleScripts by tasks.registering(Sync::class) {
     // Scripts are imported from phone storage; automod ships only as a template
     // that the "Добавить пример" button copies into the chosen folder.
-    from(scriptsSrc.resolve("automod")) { include("automod.py", "README.md") }
-    into(scriptAssetsDir.map { it.dir("templates/automod") })
+    from(scriptsSrc.resolve("automod")) { include("automod.py", "README.md"); into("automod") }
+    from(scriptsSrc.resolve("autoresponder")) { include("autoresponder.py", "README.md"); into("autoresponder") }
+    into(scriptAssetsDir.map { it.dir("templates") })
 }
 
 android {
@@ -22,8 +23,8 @@ android {
         applicationId = "com.v1pach.telescript"
         minSdk = 26
         targetSdk = 37
-        versionCode = 12
-        versionName = "1.2"
+        versionCode = 13
+        versionName = "1.3"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
