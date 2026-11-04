@@ -72,6 +72,7 @@ fun AppTextField(
     singleLine: Boolean = true,
     enabled: Boolean = true,
     supporting: String? = null,
+    isError: Boolean = false,
 ) {
     var visible by remember { mutableStateOf(false) }
     OutlinedTextField(
@@ -81,6 +82,7 @@ fun AppTextField(
         placeholder = placeholder?.let { { Text(it) } },
         singleLine = singleLine,
         enabled = enabled,
+        isError = isError,
         shape = RoundedCornerShape(24.dp),
         visualTransformation = if (secret && !visible) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = if (secret && !visible) KeyboardType.Password else keyboardType),

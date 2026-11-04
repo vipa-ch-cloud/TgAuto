@@ -42,6 +42,7 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
     val states by ScriptManager.states.collectAsStateWithLifecycle()
     val installing by LibManager.installing.collectAsStateWithLifecycle()
     var confirmTemplate by remember { mutableStateOf("") }
+    var configFor by remember { mutableStateOf("") }
     var batteryOk by remember { mutableStateOf(isIgnoringBattery(context)) }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
@@ -98,7 +99,7 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
                 }
                 BigButton("Пример: автоответчик", Icons.Default.Add, onClick = { addTemplate("autoresponder", false) },
                     modifier = Modifier.fillMaxWidth(), enabled = tree.isNotEmpty() && problem.isEmpty())
-                if (tree.isNotEmpty()) Hint("Примеры копируют automod или autoresponder (.py + README.md) в выбранную папку.")
+                if (tree.isNotEmpty()) Hint("Примеры копируют automod или autoresponder (скрипт, README.md и схему настроек) в выбранную папку.")
             }
         }
         if (!batteryOk) item {
@@ -130,6 +131,7 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
                     }
                 },
                 onStop = { ScriptService.stop(script.id) },
+                onConfig = { configFor = script.id },
                 onInstall = { extra ->
                     LibManager.installFor(script, extra)
                     onOpenLogs()
@@ -138,11 +140,16 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
         }
     }
 
+    scripts.firstOrNull { it.id == configFor }?.let { script ->
+        val st = states[script.id]?.status
+        ConfigDialog(script, running = st == RunStatus.RUNNING || st == RunStatus.STARTING, onClose = { configFor = "" })
+    }
+
     if (confirmTemplate.isNotEmpty()) {
         AlertDialog(
             onDismissRequest = { confirmTemplate = "" },
             title = { Text("Папка $confirmTemplate уже есть") },
-            text = { Text("Перезаписать $confirmTemplate.py и README.md версией из приложения? Другие файлы в папке не тронуты.") },
+            text = { Text("Перезаписать файлы примера ($confirmTemplate.py, README.md, config.schema.json) версией из приложения? Другие файлы в папке не тронуты.") },
             confirmButton = { TextButton(onClick = { val n = confirmTemplate; confirmTemplate = ""; addTemplate(n, true) }) { Text("Перезаписать") } },
             dismissButton = { TextButton(onClick = { confirmTemplate = "" }) { Text("Отмена") } }
         )
@@ -156,6 +163,7 @@ private fun ScriptCard(
     installing: Boolean,
     onStart: () -> Unit,
     onStop: () -> Unit,
+    onConfig: () -> Unit,
     onInstall: (List<String>) -> Unit,
 ) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.22f
@@ -209,6 +217,9 @@ private fun ScriptCard(
             }
             BigButton("Зависимости", Icons.Default.Download, onClick = { onInstall(emptyList()) },
                 modifier = Modifier.weight(1f), enabled = !installing && !active, loading = installing)
+        }
+        if (script.schemaDocId.isNotEmpty()) {
+            BigButton("Конфиг", Icons.Default.Tune, onClick = onConfig)
         }
     }
 }

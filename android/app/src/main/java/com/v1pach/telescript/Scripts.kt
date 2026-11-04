@@ -30,6 +30,8 @@ data class ScriptInfo(
     val configFile: File,
     val configDir: File,
     val dataDir: File,
+    /** Document id of config.schema.json in the script's folder (package scripts only), "" if none. */
+    val schemaDocId: String = "",
 )
 
 enum class RunStatus { IDLE, STARTING, RUNNING, STOPPING, ERROR }
@@ -213,22 +215,34 @@ object ScriptRepository {
                 readme?.let(::readmeSummary) ?: docstring(readSmall(tree, entry))
             },
             relPath = "$rel/$entryName", scopeRel = rel, scopeDocId = dir.id, recursive = true,
-            entryRel = "$rel/$entryName", manifest = manifest)
+            entryRel = "$rel/$entryName", manifest = manifest,
+            schemaDocId = inner.firstOrNull { !it.isDir && it.name == "config.schema.json" }?.id.orEmpty())
     }
 
     private fun make(id: String, title: String, description: String, relPath: String, scopeRel: String,
-                     scopeDocId: String, recursive: Boolean, entryRel: String, manifest: JSONObject): ScriptInfo {
+                     scopeDocId: String, recursive: Boolean, entryRel: String, manifest: JSONObject,
+                     schemaDocId: String = ""): ScriptInfo {
         val args = manifest.optJSONArray("args")?.let { a -> List(a.length()) { a.getString(it) } } ?: listOf("run")
         val configDir = File(Paths.config, id)
         return ScriptInfo(id, title, description, relPath, scopeRel, scopeDocId, recursive,
             File(Paths.mirror, entryRel), args, File(configDir, manifest.optString("config", "$id.json")),
-            configDir, File(Paths.data, id))
+            configDir, File(Paths.data, id), schemaDocId)
     }
 
     private fun withId(s: ScriptInfo, id: String): ScriptInfo {
         val configDir = File(Paths.config, id)
         return s.copy(id = id, configDir = configDir, dataDir = File(Paths.data, id),
             configFile = File(configDir, s.configFile.name.let { if (it == "${s.id}.json") "$id.json" else it }))
+    }
+
+    /** Text of the script's config.schema.json read straight from the chosen folder, or null. */
+    fun readSchema(script: ScriptInfo): String? {
+        val tree = treeUri() ?: return null
+        if (script.schemaDocId.isEmpty() || !hasAccess()) return null
+        return runCatching {
+            app.contentResolver.openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, script.schemaDocId))
+                ?.use { it.readBytes().take(256 * 1024).toByteArray().toString(Charsets.UTF_8) }
+        }.getOrNull()
     }
 
     private fun sanitize(name: String) = name.lowercase().replace(Regex("[^a-z0-9_]+"), "_").trim('_').ifEmpty { "script" }

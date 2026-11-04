@@ -12,6 +12,8 @@ val bundleScripts by tasks.registering(Sync::class) {
     // that the "Добавить пример" button copies into the chosen folder.
     from(scriptsSrc.resolve("automod")) { include("automod.py", "README.md"); into("automod") }
     from(scriptsSrc.resolve("autoresponder")) { include("autoresponder.py", "README.md"); into("autoresponder") }
+    // Settings forms ("Конфиг" button): config.schema.json of each example, kept in the app sources.
+    from(layout.projectDirectory.dir("src/templates")) { include("*/config.schema.json") }
     into(scriptAssetsDir.map { it.dir("templates") })
 }
 
@@ -23,8 +25,8 @@ android {
         applicationId = "com.v1pach.telescript"
         minSdk = 26
         targetSdk = 37
-        versionCode = 14
-        versionName = "1.4"
+        versionCode = 15
+        versionName = "1.5"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
