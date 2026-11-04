@@ -55,21 +55,21 @@ object LlmBridge {
      * Links the shim into Paths.llmBin (as `claude`) and starts the spool poller.
      * Removes the link in API-key mode so automod's "auto" backend picks the API.
      */
-    fun setup(enabled: Boolean) {
-        val link = File(Paths.llmBin, "claude")
-        if (!enabled) {
-            link.delete()
-            return
-        }
+    fun setup(order: String) {
         Paths.llmBin.mkdirs()
         Paths.llmSpool.mkdirs()
         val target = File(app.applicationInfo.nativeLibraryDir, "libclaude.so").absolutePath
-        val current = runCatching { android.system.Os.readlink(link.absolutePath) }.getOrNull()
-        if (current != target) {
-            link.delete()
-            android.system.Os.symlink(target, link.absolutePath)
+        // Only the CLIs the user allowed get a link, so scripts fall back claude -> gemini -> API key.
+        for (name in listOf("claude", "gemini")) {
+            val link = File(Paths.llmBin, name)
+            if (!(order == "both" || order == name)) { link.delete(); continue }
+            val current = runCatching { android.system.Os.readlink(link.absolutePath) }.getOrNull()
+            if (current != target) {
+                link.delete()
+                android.system.Os.symlink(target, link.absolutePath)
+            }
         }
-        startPoller()
+        if (order != "api") startPoller()
     }
 
     @Synchronized
@@ -99,7 +99,8 @@ object LlmBridge {
             val argc = File(dir, "argc").readText().trim().toInt()
             val args = (0 until argc).map { File(dir, "arg.$it").readText() }
             val stdin = File(dir, "stdin").readText()
-            run(args, stdin)
+            val cmd = File(dir, "cmd").takeIf { it.isFile }?.readText()?.trim().orEmpty().ifEmpty { "claude" }
+            run(cmd, args, stdin)
         } catch (e: Throwable) {
             Result(127, "", "TeleScript: ${e.message}")
         }
@@ -112,18 +113,30 @@ object LlmBridge {
         }
     }
 
-    /** Runs `claude <args>` in Termux with [stdin] as its standard input. Blocking. */
-    fun run(args: List<String>, stdin: String, timeoutS: Long = TIMEOUT_S): Result {
+    /**
+     * Gemini CLI settings for the sandbox, the same keys as automod's GEMINI_SETTINGS: no built-in
+     * tool (empty allowlist plus every known tool excluded) and no MCP. No approval flags are ever passed.
+     */
+    private val GEMINI_SETTINGS = """{"tools":{"core":[],"exclude":["run_shell_command","read_file","read_many_files","write_file","replace","glob","search_file_content","grep_search","list_directory","web_fetch","google_web_search","save_memory","write_todos","activate_skill","ask_user","enter_plan_mode","exit_plan_mode","delegate_to_agent","get_internal_docs"]},"mcp":{"allowed":[]},"mcpServers":{},"telemetry":{"enabled":false}}"""
+
+    /** Runs `claude`/`gemini <args>` in Termux with [stdin] as its standard input. Blocking. */
+    fun run(name: String, args: List<String>, stdin: String, timeoutS: Long = TIMEOUT_S): Result {
+        require(name == "claude" || name == "gemini") { "unknown command $name" }
         if (!termuxInstalled()) return Result(127, "", "Termux не установлен")
         if (!hasPermission()) return Result(126, "", "Нет разрешения «Выполнение команд в Termux»")
         val id = nextId.incrementAndGet()
         val future = CompletableFuture<Result>()
         pending[id] = future
         try {
-            val cmd = AppSettings.termuxCommand.value.trim().ifEmpty { "claude" }
+            val pref = if (name == "gemini") AppSettings.geminiCommand else AppSettings.termuxCommand
+            val cmd = pref.value.trim().ifEmpty { name }
             // An empty working directory, as automod's own sandbox; $CMD is split on spaces
             // so a wrapper such as `proot-distro login ubuntu -- claude` works too.
-            val script = "mkdir -p ~/.telescript-sandbox && cd ~/.telescript-sandbox && exec $cmd \"\$@\""
+            // Gemini: write the no-tools settings first; the trust flag lets the sandbox settings load.
+            val prepare = if (name == "gemini")
+                "mkdir -p .gemini && printf '%s' '$GEMINI_SETTINGS' > .gemini/settings.json && export GEMINI_CLI_TRUST_WORKSPACE=true && "
+            else ""
+            val script = "mkdir -p ~/.telescript-sandbox && cd ~/.telescript-sandbox && ${prepare}exec $cmd \"\$@\""
             val resultIntent = Intent(app, LlmResultReceiver::class.java).putExtra(LlmResultReceiver.EXTRA_ID, id)
             var flags = PendingIntent.FLAG_UPDATE_CURRENT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags = flags or PendingIntent.FLAG_MUTABLE
@@ -131,11 +144,11 @@ object LlmBridge {
             val intent = Intent("com.termux.RUN_COMMAND")
                 .setClassName(TERMUX, "com.termux.app.RunCommandService")
                 .putExtra("com.termux.RUN_COMMAND_PATH", BASH)
-                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", (listOf("-c", script, "claude") + args).toTypedArray())
+                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", (listOf("-c", script, name) + args).toTypedArray())
                 .putExtra("com.termux.RUN_COMMAND_STDIN", stdin)
                 .putExtra("com.termux.RUN_COMMAND_WORKDIR", TERMUX_HOME)
                 .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
-                .putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "TeleScript: claude")
+                .putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "TeleScript: $name")
                 .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pi)
             try {
                 app.startService(intent)

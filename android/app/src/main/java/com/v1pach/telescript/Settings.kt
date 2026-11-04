@@ -58,8 +58,10 @@ object AppSettings {
     val scriptsTree = Pref("scripts_tree", "")
 
     // LLM
-    val llmBackend = Pref("llm_backend", "termux") // termux (Claude account via Claude Code) | api
+    // Which CLIs scripts may use (via Termux): both = Claude first, Gemini as backup | claude | gemini | api
+    val llmOrder = Pref("llm_order", "both")
     val termuxCommand = Pref("termux_command", "claude")
+    val geminiCommand = Pref("gemini_command", "gemini")
     val anthropicKey = Pref("anthropic_key", "")
     val model = Pref("model", "")
 

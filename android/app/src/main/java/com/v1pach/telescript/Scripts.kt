@@ -429,12 +429,13 @@ object ScriptManager {
             env.put("${prefix}_$k", v)
         }
         env.put("TELESCRIPT_SCRIPT_ID", script.id)
-        // LLM: the Claude account in Termux (the `claude` shim) or an API key.
-        val viaTermux = AppSettings.llmBackend.value == "termux"
-        LlmBridge.setup(viaTermux)
+        // LLM: Claude / Gemini CLI in Termux (shims on PATH); the API key is the last fallback.
+        val order = AppSettings.llmOrder.value
+        LlmBridge.setup(order)
         val basePath = System.getenv("PATH") ?: "/system/bin"
-        env.put("PATH", if (viaTermux) "${Paths.llmBin.absolutePath}:$basePath" else basePath)
-        env.put("ANTHROPIC_API_KEY", if (viaTermux) "" else AppSettings.anthropicKey.value.trim())
+        env.put("PATH", if (order == "api") basePath else "${Paths.llmBin.absolutePath}:$basePath")
+        env.put("TELESCRIPT_LLM_ORDER", order)
+        env.put("ANTHROPIC_API_KEY", AppSettings.anthropicKey.value.trim())
         if (model.isNotEmpty()) env.put("ANTHROPIC_MODEL", model)
         env.put("HOME", Paths.root.absolutePath)
         env.put("TELESCRIPT_SITE_PACKAGES", Paths.sitePackages.absolutePath)

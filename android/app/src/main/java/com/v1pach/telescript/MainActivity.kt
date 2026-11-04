@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
         val wanted = buildList {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
             // Claude account mode needs to run Claude Code in Termux.
-            if (AppSettings.llmBackend.value == "termux" && LlmBridge.termuxInstalled() && !LlmBridge.hasPermission())
+            if (AppSettings.llmOrder.value != "api" && LlmBridge.termuxInstalled() && !LlmBridge.hasPermission())
                 add(LlmBridge.PERMISSION)
         }
         if (wanted.isNotEmpty()) startupPermissions.launch(wanted.toTypedArray())

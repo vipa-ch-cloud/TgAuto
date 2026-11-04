@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# TeleScript: a `claude` stand-in. Each call is handed to the app through a spool
+# TeleScript: stand-in for `claude` and `gemini` (symlinks to this file; the name is $0). Each call is handed to the app through a spool
 # directory; the app runs the real Claude Code in Termux (com.termux.RUN_COMMAND)
 # and writes back stdout, stderr and the exit code.
 spool="${0%/*}/../spool"
@@ -9,6 +9,7 @@ mkdir "$req.tmp" || exit 127
 i=0
 for a in "$@"; do printf '%s' "$a" > "$req.tmp/arg.$i"; i=$((i+1)); done
 echo "$i" > "$req.tmp/argc"
+printf '%s' "${0##*/}" > "$req.tmp/cmd"
 cat > "$req.tmp/stdin"
 mv "$req.tmp" "$req.req" || exit 127
 n=0
