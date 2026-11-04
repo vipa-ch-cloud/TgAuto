@@ -308,39 +308,6 @@ object ScriptRepository {
         if (!script.entry.isFile) throw IllegalStateException("файл ${script.relPath} не найден в папке")
         LogBus.emit(script.id, 3, "Синхронизация: обновлено $copied, удалено $removed, всего ${now.length()}")
     }
-
-    /** Copies the bundled automod template into the chosen folder through SAF. Returns an error or null. */
-    fun addTemplate(name: String, overwrite: Boolean): String? {
-        val tree = treeUri() ?: return "Сначала выберите папку"
-        if (!canWrite()) return "Нет прав на запись в папку. Выберите её заново"
-        val resolver = app.contentResolver
-        return try {
-            val rootId = DocumentsContract.getTreeDocumentId(tree)
-            val existing = list(tree, rootId).firstOrNull { it.name == name }
-            if (existing != null && !overwrite) return "EXISTS"
-            val dirUri = if (existing != null && existing.isDir) {
-                DocumentsContract.buildDocumentUriUsingTree(tree, existing.id)
-            } else {
-                DocumentsContract.createDocument(resolver, DocumentsContract.buildDocumentUriUsingTree(tree, rootId),
-                    Document.MIME_TYPE_DIR, name) ?: return "Не удалось создать папку $name"
-            }
-            val dirId = DocumentsContract.getDocumentId(dirUri)
-            val present = list(tree, dirId).associateBy { it.name }
-            for (file in app.assets.list("templates/$name").orEmpty()) {
-                val target = present[file]?.let { DocumentsContract.buildDocumentUriUsingTree(tree, it.id) }
-                    ?: DocumentsContract.createDocument(resolver, dirUri, "application/octet-stream", file)
-                    ?: return "Не удалось создать $file"
-                resolver.openOutputStream(target, "wt")!!.use { out ->
-                    app.assets.open("templates/$name/$file").use { it.copyTo(out) }
-                }
-            }
-            null
-        } catch (e: Exception) {
-            "Ошибка записи: ${e.message}"
-        }
-    }
-
-    fun templates(): List<String> = runCatching { app.assets.list("templates").orEmpty().toList() }.getOrDefault(emptyList())
 }
 
 
@@ -449,6 +416,7 @@ object ScriptManager {
         val basePath = System.getenv("PATH") ?: "/system/bin"
         env.put("PATH", if (order == "api") basePath else "${Paths.llmBin.absolutePath}:$basePath")
         env.put("TELESCRIPT_LLM_ORDER", order)
+        env.put("TELESCRIPT_LLM_PROVIDERS_FILE", Providers.path)
         env.put("ANTHROPIC_API_KEY", AppSettings.anthropicKey.value.trim())
         if (model.isNotEmpty()) env.put("ANTHROPIC_MODEL", model)
         env.put("HOME", Paths.root.absolutePath)

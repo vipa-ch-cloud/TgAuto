@@ -4,19 +4,6 @@ plugins {
     alias(libs.plugins.chaquopy)
 }
 
-// The automod example from ../../scripts/automod goes into assets/templates/automod.
-val scriptsSrc = rootDir.resolve("../scripts")
-val scriptAssetsDir = layout.buildDirectory.dir("generated/scriptAssets")
-val bundleScripts by tasks.registering(Sync::class) {
-    // Scripts are imported from phone storage; automod ships only as a template
-    // that the "Добавить пример" button copies into the chosen folder.
-    from(scriptsSrc.resolve("automod")) { include("automod.py", "README.md"); into("automod") }
-    from(scriptsSrc.resolve("autoresponder")) { include("autoresponder.py", "README.md"); into("autoresponder") }
-    // Settings forms ("Конфиг" button): config.schema.json of each example, kept in the app sources.
-    from(layout.projectDirectory.dir("src/templates")) { include("*/config.schema.json") }
-    into(scriptAssetsDir.map { it.dir("templates") })
-}
-
 android {
     namespace = "com.v1pach.telescript"
     compileSdk = 37
@@ -25,10 +12,19 @@ android {
         applicationId = "com.v1pach.telescript"
         minSdk = 26
         targetSdk = 37
-        versionCode = 15
-        versionName = "1.5"
+        versionCode = 16
+        versionName = "1.6"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
+        }
+    }
+
+    flavorDimensions += "channel"
+    productFlavors {
+        create("stable") { dimension = "channel" }
+        create("nightly") {
+            dimension = "channel"
+            applicationIdSuffix = ".nightly"
         }
     }
 
@@ -54,14 +50,7 @@ android {
         jniLibs.useLegacyPackaging = true
         jniLibs.keepDebugSymbols += "**/libclaude.so"
     }
-    sourceSets {
-        getByName("main") {
-            assets.directories.add(scriptAssetsDir.get().asFile.path)
-        }
-    }
 }
-
-tasks.named("preBuild") { dependsOn(bundleScripts) }
 
 chaquopy {
     defaultConfig {

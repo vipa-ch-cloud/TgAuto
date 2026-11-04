@@ -51,6 +51,8 @@ fun SettingsTab() {
 
         LlmCard()
 
+        if (BuildConfig.FLAVOR == "nightly") ProvidersCard()
+
         ConfigEditorCard()
 
         AppSectionCard {

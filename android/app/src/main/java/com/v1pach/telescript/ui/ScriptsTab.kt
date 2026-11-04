@@ -41,7 +41,6 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
     val tree by AppSettings.scriptsTree.flow.collectAsStateWithLifecycle()
     val states by ScriptManager.states.collectAsStateWithLifecycle()
     val installing by LibManager.installing.collectAsStateWithLifecycle()
-    var confirmTemplate by remember { mutableStateOf("") }
     var configFor by remember { mutableStateOf("") }
     var batteryOk by remember { mutableStateOf(isIgnoringBattery(context)) }
 
@@ -55,17 +54,6 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
         batteryOk = isIgnoringBattery(context)
         rescan()
     }
-
-    fun addTemplate(name: String, overwrite: Boolean) = Thread({
-        val error = ScriptRepository.addTemplate(name, overwrite)
-        android.os.Handler(android.os.Looper.getMainLooper()).post {
-            when (error) {
-                null -> { toast(context, "Пример $name добавлен в папку"); rescan() }
-                "EXISTS" -> confirmTemplate = name
-                else -> toast(context, error)
-            }
-        }
-    }, "template").start()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -87,19 +75,14 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
                     Text(ScriptRepository.folderLabel(), style = MaterialTheme.typography.bodyMedium,
                         fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurface)
                 } else {
-                    Hint("Выберите папку на телефоне, где лежат ваши .py скрипты. Каждый .py в корне — отдельный " +
+                    Hint("Выбери папку со скриптами: папку на телефоне, где лежат ваши .py скрипты. Каждый .py в корне — отдельный " +
                         "скрипт; подпапка с main.py или <имя_папки>.py — скрипт-пакет.")
                 }
                 if (problem.isNotEmpty() && tree.isNotEmpty()) Hint(problem, MaterialTheme.colorScheme.error)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     BigButton(if (tree.isEmpty()) "Выбрать папку" else "Сменить папку", Icons.Default.Folder,
                         onClick = { picker.launch(null) }, modifier = Modifier.weight(1f))
-                    BigButton("Пример: automod", Icons.Default.Add, onClick = { addTemplate("automod", false) },
-                        modifier = Modifier.weight(1f), enabled = tree.isNotEmpty() && problem.isEmpty())
                 }
-                BigButton("Пример: автоответчик", Icons.Default.Add, onClick = { addTemplate("autoresponder", false) },
-                    modifier = Modifier.fillMaxWidth(), enabled = tree.isNotEmpty() && problem.isEmpty())
-                if (tree.isNotEmpty()) Hint("Примеры копируют automod или autoresponder (скрипт, README.md и схему настроек) в выбранную папку.")
             }
         }
         if (!batteryOk) item {
@@ -113,7 +96,7 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
         }
         if (tree.isNotEmpty() && problem.isEmpty() && scripts.isEmpty() && !scanning) item {
             AppSectionCard {
-                Hint("В папке нет скриптов. Положите туда .py файлы или нажмите «Пример».")
+                Hint("В папке нет скриптов. Положите туда .py файлы. Скрипты лежат в отдельном репозитории.")
             }
         }
         items(scripts, key = { it.id }) { script ->
@@ -143,16 +126,6 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
     scripts.firstOrNull { it.id == configFor }?.let { script ->
         val st = states[script.id]?.status
         ConfigDialog(script, running = st == RunStatus.RUNNING || st == RunStatus.STARTING, onClose = { configFor = "" })
-    }
-
-    if (confirmTemplate.isNotEmpty()) {
-        AlertDialog(
-            onDismissRequest = { confirmTemplate = "" },
-            title = { Text("Папка $confirmTemplate уже есть") },
-            text = { Text("Перезаписать файлы примера ($confirmTemplate.py, README.md, config.schema.json) версией из приложения? Другие файлы в папке не тронуты.") },
-            confirmButton = { TextButton(onClick = { val n = confirmTemplate; confirmTemplate = ""; addTemplate(n, true) }) { Text("Перезаписать") } },
-            dismissButton = { TextButton(onClick = { confirmTemplate = "" }) { Text("Отмена") } }
-        )
     }
 }
 

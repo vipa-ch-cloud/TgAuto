@@ -9,6 +9,7 @@ class TeleScriptApp : Application() {
         super.onCreate()
         AppSettings.init(this)
         LlmBridge.init(this)
+        Providers.init(this)
         if (!Python.isStarted()) Python.start(AndroidPlatform(this))
         ScriptRepository.init(this)
         // Warm up Python (log routing, telethon import) off the main thread.

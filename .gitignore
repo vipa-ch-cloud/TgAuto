@@ -1,4 +1,4 @@
-# automod is maintained separately; the build copies it as a template
+# scripts are maintained in a separate repo
 scripts/
 __pycache__/
 *.pyc
@@ -10,3 +10,13 @@ android/local.properties
 android/.idea/
 *.iml
 pi-backup/
+# secrets and local files
+api.json
+proxy.json
+*.session
+*.session-journal
+*.jks
+*.keystore
+keystore.properties
+# scripts live in a separate repo
+scripts-repo-staging/
