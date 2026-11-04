@@ -1,4 +1,4 @@
-"""TeleScript host: runs bundled user scripts inside the app's embedded Python.
+"""TgAuto host: runs bundled user scripts inside the app's embedded Python.
 
 Each script runs in its own Java thread (created by ScriptService) via runpy, as
 ``__main__``. Output from print(), the logging module and tracebacks is routed to

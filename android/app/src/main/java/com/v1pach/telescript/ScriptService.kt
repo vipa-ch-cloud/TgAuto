@@ -33,7 +33,7 @@ class ScriptService : Service() {
         createChannel(this)
         goForeground(buildNotification(emptySet()))
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TeleScript:scripts")
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TgAuto:scripts")
             .apply { setReferenceCounted(false); acquire() }
         watcher = scope.launch {
             var seenRunning = false
@@ -85,7 +85,7 @@ class ScriptService : Service() {
         val text = if (running.isEmpty()) "Запуск…" else "Работают: " + running.sorted().joinToString(", ")
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_plane)
-            .setContentTitle("TeleScript")
+            .setContentTitle("TgAuto")
             .setContentText(text)
             .setOngoing(true)
             .setOnlyAlertOnce(true)

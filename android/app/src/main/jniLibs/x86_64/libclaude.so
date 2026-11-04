@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# TeleScript: stand-in for `claude` and `gemini` (symlinks to this file; the name is $0). Each call is handed to the app through a spool
+# TgAuto: stand-in for `claude` and `gemini` (symlinks to this file; the name is $0). Each call is handed to the app through a spool
 # directory; the app runs the real Claude Code in Termux (com.termux.RUN_COMMAND)
 # and writes back stdout, stderr and the exit code.
 spool="${0%/*}/../spool"
@@ -17,7 +17,7 @@ while [ ! -f "$req.req/done" ]; do
   sleep 1
   n=$((n+1))
   if [ "$n" -gt 600 ]; then
-    echo "TeleScript: нет ответа от Termux" >&2
+    echo "TgAuto: нет ответа от Termux" >&2
     rm -rf "$req.req"
     exit 124
   fi

@@ -1,4 +1,4 @@
-"""Telegram login for the TeleScript app (phone code primary, QR secondary).
+"""Telegram login for the TgAuto app (phone code primary, QR secondary).
 
 All functions are synchronous (called from Kotlin on an IO thread) and return JSON.
 They run coroutines on one dedicated asyncio loop thread that owns the client.
@@ -55,7 +55,7 @@ async def _client(session, api_id, api_hash, proxy_json):
     if client is None:
         os.makedirs(os.path.dirname(session), exist_ok=True)
         client = TelegramClient(session, int(api_id), api_hash,
-                                device_model="TeleScript", app_version="1.0",
+                                device_model="TgAuto", app_version="1.0",
                                 **_proxy_kwargs(json.loads(proxy_json or "{}")))
         _state.update(client=client, key=key)
     if not client.is_connected():

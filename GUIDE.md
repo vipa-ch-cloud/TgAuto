@@ -1,4 +1,4 @@
-# TeleScript: установка на телефон (root не нужен)
+# TgAuto: установка на телефон (root не нужен)
 
 ## 1. Termux
 - Скачай Termux с F-Droid (f-droid.org) или с GitHub (github.com/termux/termux-app/releases).
@@ -38,23 +38,23 @@ gemini --version
 - Выйди командой `/quit`.
 - Проверь: `gemini -p "скажи ок"`. Если ответил, всё работает.
 
-## 4. Разрешить TeleScript управлять Termux
+## 4. Разрешить TgAuto управлять Termux
 ```
 mkdir -p ~/.termux && echo "allow-external-apps=true" >> ~/.termux/termux.properties
 termux-reload-settings
 ```
 
-## 5. TeleScript
-- Установи `TeleScript-1.6.apk`.
+## 5. TgAuto
+- Установи `TgAuto-1.6.apk`.
 - При запуске разреши уведомления и «Выполнять команды в Termux».
-- В настройках телефона отключи оптимизацию батареи для **Termux** и **TeleScript**: Приложения → Батарея → Без ограничений.
+- В настройках телефона отключи оптимизацию батареи для **Termux** и **TgAuto**: Приложения → Батарея → Без ограничений.
 
 ## 6. Ключи Telegram
 - Зайди на my.telegram.org → API development tools → создай приложение (название любое).
 - Скопируй **api_id** и **api_hash**.
 
 ## 7. Вход в Telegram
-- В TeleScript открой вкладку «Аккаунт» и вставь api_id и api_hash.
+- В TgAuto открой вкладку «Аккаунт» и вставь api_id и api_hash.
 - Введи номер, потом код из Telegram, потом пароль 2FA, если он есть.
 
 ## 8. Проверка Claude и Gemini
@@ -64,7 +64,7 @@ termux-reload-settings
 
 ## 9. Скрипты
 - Открой вкладку «Скрипты» и нажми «Выбрать папку». Создай, например, `Documents/Scripts`.
-- Положи в эту папку скрипты (они лежат в отдельном репозитории TeleScript scripts: папки `automod` и `autoresponder`).
+- Положи в эту папку скрипты (они лежат в отдельном репозитории TgAutoS (github.com/vipa-ch-cloud/TgAutoS): папки `automod` и `autoresponder`).
 - На карточке скрипта нажми «Зависимости», потом «Запустить».
 - Папки скриптов лежат в личной памяти приложения: `/data/data/com.v1pach.telescript/files/config/<имя>` и `.../files/data/<имя>`. Туда есть доступ только с root. Для автоответчика: `profile.json` в `config/autoresponder`, `state.json` и `style.json` в `data/autoresponder`. Без root это не нужно: скрипт создаст свои файлы сам.
 
@@ -80,7 +80,7 @@ termux-reload-settings
 
 ## 11. Автоответчик
 - Во вкладке «Скрипты» выбери папку со скриптом `autoresponder`, потом «Зависимости».
-- Отдельный вход не нужен: скрипт берёт сессию TeleScript (вкладка «Аккаунт», шаг 7). QR сканировать не надо.
+- Отдельный вход не нужен: скрипт берёт сессию TgAuto (вкладка «Аккаунт», шаг 7). QR сканировать не надо.
 - Команды в любом чате:
   - `.start`: включить ответы в этом чате.
   - `.start imit`: включить с имитацией твоего стиля.
@@ -98,8 +98,8 @@ termux-reload-settings
 - Изменения применятся после перезапуска скрипта.
 - Свой скрипт-папка получает кнопку, если рядом лежит `config.schema.json` (формат смотри в `config.schema.json` у automod).
 
-## 13. Провайдеры: DeepSeek, OpenAI, свой API (только сборка TeleScript Nightly)
-Этот раздел появился в Nightly (`TeleScript-nightly-*.apk`, ставится рядом со стабильной). В стабильной сборке настройки LLM остались прежними.
+## 13. Провайдеры: DeepSeek, OpenAI, свой API (только сборка TgAuto Nightly)
+Этот раздел появился в Nightly (`TgAuto-nightly-*.apk`, ставится рядом со стабильной). В стабильной сборке настройки LLM остались прежними.
 Если Claude и Gemini не нужны или недоступны, скрипты могут ходить в любой OpenAI-совместимый сервис.
 - «Настройки» → «Провайдеры» → нажми «DeepSeek», «OpenAI» или «Свой API».
 - DeepSeek: ключ создаётся на platform.deepseek.com → API keys. Адрес `https://api.deepseek.com`, модель `deepseek-chat` уже подставлены. Нужен положительный баланс.
@@ -111,7 +111,7 @@ termux-reload-settings
 
 ## Если не работает
 - `CANNOT LINK EXECUTABLE "node"`: выполни `pkg upgrade -y`, затем `pkg install -y libc++ nodejs`.
-- «Проверить» пишет `bad interpreter: No such file or directory`: выполни в Termux `pkg install -y libc++ nodejs` и перезапусти Termux. TeleScript уже запускает CLI через `node`, но без node ничего не заработает.
+- «Проверить» пишет `bad interpreter: No such file or directory`: выполни в Termux `pkg install -y libc++ nodejs` и перезапусти Termux. TgAuto уже запускает CLI через `node`, но без node ничего не заработает.
 - «Проверить» пишет «не установлен» или `not found`: нужного CLI нет в Termux, поставь его по шагу 2 (Claude) или 3б (Gemini).
 - `claude` выдаёт «Bad system call» или «native binary not installed»: встала не та версия, повтори установку с `@2.1.112`.
 - «Проверить» молчит: открой Termux, чтобы он висел в фоне, и попробуй ещё раз.

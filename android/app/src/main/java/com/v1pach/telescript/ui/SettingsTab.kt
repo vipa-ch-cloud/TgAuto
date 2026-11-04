@@ -103,16 +103,16 @@ fun SettingsTab() {
         AppSectionCard {
             SectionHeader(Icons.Default.BatteryChargingFull, "Работа в фоне")
             if (batteryOk) {
-                Hint("Оптимизация батареи для TeleScript отключена — скрипты могут работать в фоне.")
+                Hint("Оптимизация батареи для TgAuto отключена — скрипты могут работать в фоне.")
             } else {
-                Hint("Android может усыплять скрипты. Отключите оптимизацию батареи для TeleScript.")
+                Hint("Android может усыплять скрипты. Отключите оптимизацию батареи для TgAuto.")
                 BigButton("Отключить оптимизацию", Icons.Default.BatterySaver, onClick = { requestIgnoreBattery(context) })
             }
         }
 
         AppSectionCard {
             SectionHeader(Icons.Default.Info, "О приложении")
-            Text("TeleScript 1.0", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
+            Text("TgAuto ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface)
             Hint("Запуск Python-скриптов Telethon на телефоне. Python 3.12 (Chaquopy), Telethon, httpx, python-socks.")
         }

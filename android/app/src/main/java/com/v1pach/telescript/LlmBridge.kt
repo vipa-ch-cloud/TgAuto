@@ -102,7 +102,7 @@ object LlmBridge {
             val cmd = File(dir, "cmd").takeIf { it.isFile }?.readText()?.trim().orEmpty().ifEmpty { "claude" }
             run(cmd, args, stdin)
         } catch (e: Throwable) {
-            Result(127, "", "TeleScript: ${e.message}")
+            Result(127, "", "TgAuto: ${e.message}")
         }
         if (!dir.isDirectory) return // the script gave up (timeout) and removed it
         runCatching {
@@ -158,7 +158,7 @@ object LlmBridge {
                 .putExtra("com.termux.RUN_COMMAND_STDIN", stdin)
                 .putExtra("com.termux.RUN_COMMAND_WORKDIR", TERMUX_HOME)
                 .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
-                .putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "TeleScript: $name")
+                .putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "TgAuto: $name")
                 .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pi)
             try {
                 app.startService(intent)

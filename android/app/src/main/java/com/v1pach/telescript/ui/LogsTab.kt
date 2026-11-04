@@ -80,7 +80,7 @@ fun LogsTab() {
                         "${it.time} [${it.source}] ${it.message}" + if (it.count > 1) " (x${it.count})" else ""
                     }
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("TeleScript logs", text))
+                    clipboard.setPrimaryClip(ClipData.newPlainText("TgAuto logs", text))
                     Toast.makeText(context, "Скопировано", Toast.LENGTH_SHORT).show()
                 }) {
                     Icon(Icons.Default.ContentCopy, contentDescription = "Копировать", tint = MaterialTheme.colorScheme.primary)

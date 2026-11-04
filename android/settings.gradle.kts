@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TeleScript"
+rootProject.name = "TgAuto"
 include(":app")

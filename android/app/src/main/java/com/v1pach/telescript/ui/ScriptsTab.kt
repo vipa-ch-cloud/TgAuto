@@ -88,7 +88,7 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
         if (!batteryOk) item {
             AppSectionCard {
                 SectionHeader(Icons.Default.BatteryAlert, "Работа в фоне")
-                Hint("Чтобы Android не усыплял скрипты, отключите для TeleScript оптимизацию батареи.")
+                Hint("Чтобы Android не усыплял скрипты, отключите для TgAuto оптимизацию батареи.")
                 BigButton("Отключить оптимизацию", Icons.Default.BatterySaver, onClick = {
                     requestIgnoreBattery(context)
                 })

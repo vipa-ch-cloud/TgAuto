@@ -1,4 +1,4 @@
-"""Tiny runtime package installer for TeleScript (Chaquopy has no pip at runtime).
+"""Tiny runtime package installer for TgAuto (Chaquopy has no pip at runtime).
 
 Resolves requirements through the PyPI JSON API (pure-Python ``py3-none-any``
 wheels) and, for packages with native code, Chaquopy's Android wheel index.
@@ -164,7 +164,7 @@ def _get(url, as_json=False):
     try:
         import httpx  # bundled in the app; certifi CA bundle works on Android
         with httpx.Client(timeout=TIMEOUT, follow_redirects=True,
-                          headers={"User-Agent": "TeleScript/1.0"}) as client:
+                          headers={"User-Agent": "TgAuto/1.0"}) as client:
             response = client.get(url)
             if response.status_code == 404:
                 return None
@@ -175,7 +175,7 @@ def _get(url, as_json=False):
         import urllib.request
         try:
             with urllib.request.urlopen(urllib.request.Request(
-                    url, headers={"User-Agent": "TeleScript/1.0"}), timeout=TIMEOUT) as r:
+                    url, headers={"User-Agent": "TgAuto/1.0"}), timeout=TIMEOUT) as r:
                 data = r.read()
         except urllib.error.HTTPError as e:
             if e.code == 404:
