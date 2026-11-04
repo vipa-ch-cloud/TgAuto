@@ -7,6 +7,7 @@ import com.chaquo.python.android.AndroidPlatform
 class TeleScriptApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        Str.init(this)
         AppSettings.init(this)
         LlmBridge.init(this)
         Providers.init(this)

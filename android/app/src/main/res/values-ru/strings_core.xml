@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cs_need_int">Нужно целое число</string>
+    <string name="cs_need_number">Нужно число</string>
+    <string name="cs_pick_value">Выберите значение</string>
+    <string name="cs_min">Не меньше %1$s</string>
+    <string name="cs_max">Не больше %1$s</string>
+    <string name="cs_bad_file">Недопустимый файл настроек: %1$s</string>
+    <string name="cs_corrupt">Файл %1$s повреждён, сохранение отключено</string>
+    <string name="cs_nested">%1$s: в файле %2$s «%3$s» вложено в не-объект</string>
+    <string name="cs_write_fail">Не удалось записать %1$s: %2$s</string>
+    <string name="svc_starting">Запуск…</string>
+    <string name="svc_running">Работают: %1$s</string>
+    <string name="svc_stop_all">Остановить всё</string>
+    <string name="svc_channel">Работающие скрипты</string>
+    <string name="llm_bridge_err">Мост: %1$s</string>
+    <string name="llm_no_termux">Termux не установлен</string>
+    <string name="llm_no_perm">Нет разрешения «Выполнение команд в Termux»</string>
+    <string name="llm_timeout">Termux не ответил за %1$s с</string>
+    <string name="llm_start_fail">Не удалось запустить команду в Termux: %1$s</string>
+    <string name="llm_bad_interp">Не найден интерпретатор скрипта (bad interpreter): в Termux выполните pkg install nodejs libc++ и переустановите CLI.</string>
+    <string name="llm_not_found">Команда не найдена в Termux: CLI не установлен (см. инструкцию).</string>
+    <string name="llm_need_login">Нужен вход: запустите CLI в Termux и войдите в аккаунт.</string>
+    <string name="llm_empty">Пустой ответ.</string>
+    <string name="llm_exit_code">Команда завершилась с кодом %1$s.</string>
+    <string name="llm_empty_result">Termux вернул пустой результат</string>
+    <string name="rep_phone_storage">Память телефона</string>
+    <string name="rep_no_folder">Папка со скриптами не выбрана</string>
+    <string name="rep_access_revoked">Доступ к папке отозван. Выберите её заново</string>
+    <string name="rep_read_fail">Не удалось прочитать папку: %1$s</string>
+    <string name="rep_ex_no_folder">папка со скриптами не выбрана</string>
+    <string name="rep_ex_revoked">доступ к папке отозван, выберите её заново</string>
+    <string name="rep_big_file">Пропущен большой файл %1$s (%2$s МБ)</string>
+    <string name="rep_ex_open">не удалось открыть %1$s</string>
+    <string name="rep_ex_missing">файл %1$s не найден в папке</string>
+    <string name="rep_sync">Синхронизация: обновлено %1$s, удалено %2$s, всего %3$s</string>
+    <string name="rep_need_api">Укажите api_id и api_hash на вкладке «Аккаунт»</string>
+    <string name="rep_need_login">Сначала войдите в Telegram на вкладке «Аккаунт»</string>
+    <string name="rep_no_access">Нет доступа к папке со скриптами: выберите её заново</string>
+    <string name="rep_start_fail">Запуск не удался: %1$s</string>
+    <string name="rep_stop_fail">Ошибка остановки: %1$s</string>
+    <string name="rep_install_fail">Установка библиотек не удалась: %1$s</string>
+    <string name="rep_remove_fail">Удаление %1$s: %2$s</string>
+    <string name="rep_lib_removed">Библиотека %1$s удалена</string>
+    <string name="rep_all_libs_removed">Все установленные библиотеки удалены</string>
+</resources>

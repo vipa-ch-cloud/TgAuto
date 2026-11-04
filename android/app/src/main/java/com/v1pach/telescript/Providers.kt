@@ -129,7 +129,7 @@ object Providers {
         if (code in 200..299) {
             val reply = try { JSONObject(text).getJSONArray("choices").getJSONObject(0)
                 .getJSONObject("message").optString("content") } catch (e: Exception) { "" }
-            Result(true, reply.trim().take(200).ifEmpty { "(пустой ответ)" })
+            Result(true, reply.trim().take(200).ifEmpty { Str.get(R.string.prov_empty_reply) })
         } else Result(false, "HTTP $code: " + text.replace(p.apiKey.ifBlank { "\u0000" }, "***").take(300))
     } catch (e: Exception) { Result(false, e.javaClass.simpleName + ": " + (e.message ?: "").take(200)) }
 

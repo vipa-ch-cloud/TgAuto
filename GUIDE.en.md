@@ -1,0 +1,125 @@
+[Русский](GUIDE.md) | English
+
+# TgAuto: installing on your phone (no root needed)
+
+## 1. Termux
+- Download Termux from F-Droid (f-droid.org) or GitHub (github.com/termux/termux-app/releases).
+- The Google Play version will not work, it is outdated.
+
+## 2. Claude Code in Termux
+Open Termux and enter the commands one by one:
+```
+pkg upgrade -y
+pkg install -y libc++ nodejs
+node -v
+DISABLE_AUTOUPDATER=1 npm i -g @anthropic-ai/claude-code@2.1.112
+mkdir -p ~/.claude && echo '{"env":{"DISABLE_AUTOUPDATER":"1"}}' > ~/.claude/settings.json
+```
+- If Termux asks about replacing configs, press Enter.
+- `node -v` must print a version. If you get `CANNOT LINK EXECUTABLE` instead, run the first two lines again.
+- You need exactly Claude Code 2.1.112; newer versions do not run in Termux.
+
+## 3. Log in to Claude
+- Type `claude` and choose to log in with a Claude account.
+- A link opens: sign in in the browser, copy the code and paste it back into Termux.
+- Exit with `/exit`.
+- Check: `claude -p "say ok"`. If it answers, everything works.
+
+## 3b. Gemini (optional, fallback)
+If Claude is unavailable, scripts will use Gemini. You need a regular Google account, no API key.
+```
+pkg install -y python make clang
+npm install -g @google/gemini-cli --ignore-scripts
+gemini --version
+```
+- `--ignore-scripts` is required: without it the install fails building `tree-sitter` (an `android_ndk_path` error). It is not needed for operation.
+- If the new version still does not start, install an older one: `npm install -g @google/gemini-cli@0.2.2 --ignore-scripts`. There is also a Termux build: github.com/DioNanos/gemini-cli-termux.
+- Type `gemini` and choose **Login with Google** (Sign in with Google).
+- Gemini shows a link. Open it in the phone's browser and sign in to Google. The page then redirects to `localhost`: that is the same phone, this is expected, go back to Termux.
+- If Gemini asks for a code, copy it from the page and paste it into Termux. If the browser does not open by itself, run: `NO_BROWSER=true gemini`.
+- Exit with `/quit`.
+- Check: `gemini -p "say ok"`. If it answers, everything works.
+
+## 4. Allow TgAuto to control Termux
+```
+mkdir -p ~/.termux && echo "allow-external-apps=true" >> ~/.termux/termux.properties
+termux-reload-settings
+```
+
+## 5. TgAuto
+- Install `TgAuto-1.7.apk`.
+- On first launch allow notifications and "Run commands in Termux".
+- In the phone settings disable battery optimization for **Termux** and **TgAuto**: Apps → Battery → Unrestricted.
+
+## 6. Telegram keys
+- Go to my.telegram.org → API development tools → create an application (any name).
+- Copy the **api_id** and **api_hash**.
+
+## 7. Log in to Telegram
+- In TgAuto open the "Account" tab and paste the api_id and api_hash.
+- Enter your phone number, then the code from Telegram, then the 2FA password if you have one.
+
+## 8. Checking Claude and Gemini
+- Open "Settings" → LLM and choose the order: "Claude, then Gemini", "Claude only", "Gemini only" or "API key only".
+- Press "Check" for the account you need. You should get "ok" back.
+- The Anthropic key at the bottom is only a last resort and can be left empty.
+
+## 9. Scripts
+- Open the "Scripts" tab and press "Choose folder". Create, for example, `Documents/Scripts`.
+- Put the scripts into this folder (they live in a separate repository, TgAutoS (github.com/vipa-ch-cloud/TgAutoS): the `automod` and `autoresponder` folders).
+- On the script card press "Dependencies", then "Run".
+- Script folders live in the app's private storage: `/data/data/com.v1pach.telescript/files/config/<name>` and `.../files/data/<name>`. Only root can access them. For the auto-responder: `profile.json` in `config/autoresponder`, `state.json` and `style.json` in `data/autoresponder`. Without root you do not need this: the script creates its own files.
+
+## 10. Automod in a chat
+Your account must be an admin in the chat where Iris is present. Type the commands right in the chat:
+- `.automod`: enable automod in this chat.
+- `.automod -r=link`: enable and take the rules from the link.
+- `.automod -d`: remove automod from this chat.
+- `.automod off`: turn off (the chat stays in the list).
+- `.automod status`: show whether automod is on.
+- `.context N`: how many messages to look at in one check (N is a number).
+- `.ams`: check the chat right now.
+
+## 11. Auto-responder
+- In the "Scripts" tab choose the folder with the `autoresponder` script, then "Dependencies".
+- No separate login is needed: the script uses the TgAuto session ("Account" tab, step 7). No QR scanning.
+- Commands in any chat:
+  - `.start`: enable replies in this chat.
+  - `.start imit`: enable with imitation of your style.
+  - `.stop`: disable.
+  - `.mem`: show what the bot remembers.
+  - `.ign`: ignore this chat.
+  - `.noign`: stop ignoring.
+  - `.reload`: reread settings and profile.
+- To voice messages the bot replies "voice again" (in Russian: «опять гс»).
+
+## 12. The "Config" button
+- A script with settings has a "Config" button on its card (automod and the auto-responder have it).
+- Change switches, numbers, text, lists and choices, then press "Save". "Reset to defaults" sets default values but does not save yet.
+- Only the shown settings are saved, the rest of the file is untouched. Keys and passwords are not shown here.
+- Changes apply after the script is restarted.
+- Your own script folder gets the button if a `config.schema.json` lies next to it (see automod's `config.schema.json` for the format).
+
+## 13. Providers: DeepSeek, OpenAI, your own API (TgAuto Nightly build only)
+This section appeared in Nightly (`TgAuto-nightly-*.apk`, installs next to the stable one). In the stable build the LLM settings stay as before.
+If you do not need Claude and Gemini or they are unavailable, scripts can use any OpenAI-compatible service.
+- "Settings" → "Providers" → press "DeepSeek", "OpenAI" or "Custom API".
+- DeepSeek: create a key at platform.deepseek.com → API keys. The address `https://api.deepseek.com` and model `deepseek-chat` are already filled in. A positive balance is required.
+- Custom API (for example tokenlavka): take the address from the service dashboard, it usually ends with `/v1`, for example `https://tokenlavka.example/v1`. Paste the key and the model name. The "Load model list" button shows the available ones.
+- Press "Check": you get a short answer or an error text (401 means a wrong key, 404 a wrong address or model).
+- Order in the list with the up and down buttons: scripts try providers top to bottom.
+- Privacy: keys are stored only in the app's private folder on the phone (a file with 600 permissions). They are not written to logs, not shown after saving and do not end up in the scripts folder. The script receives only the file path in `TELESCRIPT_LLM_PROVIDERS_FILE`; the file is read by the script you started.
+- Codex (ChatGPT account) is not supported yet: the official login in Termux fails for many (github.com/openai/codex/issues/6632), there is no proven method.
+
+## Troubleshooting
+- `CANNOT LINK EXECUTABLE "node"`: run `pkg upgrade -y`, then `pkg install -y libc++ nodejs`.
+- "Check" reports `bad interpreter: No such file or directory`: in Termux run `pkg install -y libc++ nodejs` and restart Termux. TgAuto already starts the CLI through `node`, but nothing works without node.
+- "Check" reports "not installed" or `not found`: the needed CLI is missing in Termux, install it per step 2 (Claude) or 3b (Gemini).
+- `claude` prints "Bad system call" or "native binary not installed": the wrong version got installed, repeat the install with `@2.1.112`.
+- "Check" is silent: open Termux so it stays in the background and try again.
+- `gemini` fails to install with `android_ndk_path` or `tree-sitter`: install with `--ignore-scripts`, see step 3b.
+- "Check" for Gemini mentions login: run `gemini` in Termux and log in again via Login with Google.
+- Gemini answers about quota: a free account has a daily limit, wait or choose "Claude only".
+- Script errors are in the "Logs" tab.
+
+Everyone needs their own Claude account and api_id/api_hash: you do steps 3 (and 3b if you need Gemini) and 6 yourself.

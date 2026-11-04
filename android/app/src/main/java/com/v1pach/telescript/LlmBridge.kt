@@ -79,7 +79,7 @@ object LlmBridge {
         Paths.llmSpool.listFiles()?.forEach { it.deleteRecursively() }
         poller = Thread({
             while (true) {
-                runCatching { scan() }.onFailure { LogBus.e(SOURCE, "Мост: ${it.message}") }
+                runCatching { scan() }.onFailure { LogBus.e(SOURCE, Str.get(R.string.llm_bridge_err, it.message.orEmpty())) }
                 Thread.sleep(300)
             }
         }, "llm-bridge").apply { isDaemon = true; start() }
@@ -122,8 +122,8 @@ object LlmBridge {
     /** Runs `claude`/`gemini <args>` in Termux with [stdin] as its standard input. Blocking. */
     fun run(name: String, args: List<String>, stdin: String, timeoutS: Long = TIMEOUT_S): Result {
         require(name == "claude" || name == "gemini") { "unknown command $name" }
-        if (!termuxInstalled()) return Result(127, "", "Termux не установлен")
-        if (!hasPermission()) return Result(126, "", "Нет разрешения «Выполнение команд в Termux»")
+        if (!termuxInstalled()) return Result(127, "", Str.get(R.string.llm_no_termux))
+        if (!hasPermission()) return Result(126, "", Str.get(R.string.llm_no_perm))
         val id = nextId.incrementAndGet()
         val future = CompletableFuture<Result>()
         pending[id] = future
@@ -168,11 +168,11 @@ object LlmBridge {
             }
             return future.get(timeoutS, TimeUnit.SECONDS)
         } catch (e: TimeoutException) {
-            LogBus.w(SOURCE, "Termux не ответил за $timeoutS с")
-            return Result(124, "", "Termux не ответил за $timeoutS с")
+            LogBus.w(SOURCE, Str.get(R.string.llm_timeout, timeoutS))
+            return Result(124, "", Str.get(R.string.llm_timeout, timeoutS))
         } catch (e: Throwable) {
             LogBus.e(SOURCE, "RUN_COMMAND: ${e.message}")
-            return Result(125, "", "Не удалось запустить команду в Termux: ${e.message}")
+            return Result(125, "", Str.get(R.string.llm_start_fail, e.message.orEmpty()))
         } finally {
             pending.remove(id)
         }
@@ -183,19 +183,19 @@ object LlmBridge {
         val e = r.stderr
         return when {
             r.exitCode == 0 && r.stdout.isNotBlank() -> ""
-            "bad interpreter" in e -> "Не найден интерпретатор скрипта (bad interpreter): в Termux выполните pkg install nodejs libc++ и переустановите CLI."
-            "не установлен" in e || "not found" in e || r.exitCode == 127 -> "Команда не найдена в Termux: CLI не установлен (см. инструкцию)."
-            "login" in e.lowercase() || "auth" in e.lowercase() -> "Нужен вход: запустите CLI в Termux и войдите в аккаунт."
+            "bad interpreter" in e -> Str.get(R.string.llm_bad_interp)
+            "не установлен" in e || "not found" in e || r.exitCode == 127 -> Str.get(R.string.llm_not_found)
+            "login" in e.lowercase() || "auth" in e.lowercase() -> Str.get(R.string.llm_need_login)
             r.exitCode == 126 || r.exitCode == 125 || r.exitCode == 124 -> e.lineSequence().firstOrNull().orEmpty()
-            r.exitCode == 0 -> "Пустой ответ."
-            else -> "Команда завершилась с кодом ${r.exitCode}."
+            r.exitCode == 0 -> Str.get(R.string.llm_empty)
+            else -> Str.get(R.string.llm_exit_code, r.exitCode)
         }
     }
 
     internal fun complete(id: Int, bundle: Bundle?) {
         val future = pending[id] ?: return
         if (bundle == null) {
-            future.complete(Result(125, "", "Termux вернул пустой результат"))
+            future.complete(Result(125, "", Str.get(R.string.llm_empty_result)))
             return
         }
         val stdout = bundle.getString("stdout").orEmpty()

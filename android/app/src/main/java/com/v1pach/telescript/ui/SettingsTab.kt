@@ -1,5 +1,6 @@
 package com.v1pach.telescript.ui
 
+import com.v1pach.telescript.R
 import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -47,7 +49,7 @@ fun SettingsTab() {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        TabHeader("Настройки")
+        TabHeader(stringResource(R.string.settings_title))
 
         LlmCard()
 
@@ -56,10 +58,9 @@ fun SettingsTab() {
         ConfigEditorCard()
 
         AppSectionCard {
-            SectionHeader(Icons.Default.Inventory2, "Библиотеки")
+            SectionHeader(Icons.Default.Inventory2, stringResource(R.string.settings_libs))
             if (libraries.isEmpty()) {
-                Hint("Дополнительных библиотек нет. Их ставит кнопка «Зависимости» на карточке скрипта " +
-                    "(из requirements.txt или заголовка «# requires: …»).")
+                Hint(stringResource(R.string.settings_libs_none))
             } else {
                 libraries.forEach { lib ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -68,32 +69,31 @@ fun SettingsTab() {
                             Hint(lib.version)
                         }
                         IconButton(onClick = { LibManager.remove(lib.name) }) {
-                            Icon(Icons.Default.DeleteOutline, contentDescription = "Удалить ${lib.name}",
+                            Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.settings_lib_delete, lib.name),
                                 tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
-                BigButton("Очистить всё", Icons.Default.DeleteSweep, onClick = { confirmClear = true }, danger = true)
+                BigButton(stringResource(R.string.settings_clear_all), Icons.Default.DeleteSweep, onClick = { confirmClear = true }, danger = true)
             }
-            Hint("Встроены: telethon, httpx, python-socks, pyaes, rsa. Чистые Python-пакеты берутся с PyPI, " +
-                "нативные — из репозитория Chaquopy.")
+            Hint(stringResource(R.string.settings_libs_builtin))
         }
 
         AppSectionCard {
-            SectionHeader(Icons.Default.Palette, "Оформление")
-            Text("Тема", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SectionHeader(Icons.Default.Palette, stringResource(R.string.settings_appearance))
+            Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("system" to "Системная", "light" to "Светлая", "dark" to "Тёмная").forEach { (k, label) ->
+                listOf("system" to stringResource(R.string.settings_theme_system), "light" to stringResource(R.string.settings_theme_light), "dark" to stringResource(R.string.settings_theme_dark)).forEach { (k, label) ->
                     ChoiceButton(label, themeMode == k, Modifier.weight(1f)) { AppSettings.themeMode.set(k) }
                 }
             }
             val dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-            SwitchRow("Динамические цвета", if (dynamicAvailable) "Цвета из обоев (Material You)" else "Нужен Android 12+",
+            SwitchRow(stringResource(R.string.settings_dynamic), if (dynamicAvailable) stringResource(R.string.settings_dynamic_on) else stringResource(R.string.settings_dynamic_off),
                 dynamicColor && dynamicAvailable, enabled = dynamicAvailable) { AppSettings.dynamicColor.set(it) }
             if (!dynamicColor || !dynamicAvailable) {
-                Text("Палитра", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.settings_palette), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("indigo" to "Индиго", "espresso" to "Эспрессо", "forest" to "Лес").forEach { (k, label) ->
+                    listOf("indigo" to stringResource(R.string.settings_palette_indigo), "espresso" to stringResource(R.string.settings_palette_espresso), "forest" to stringResource(R.string.settings_palette_forest)).forEach { (k, label) ->
                         ChoiceButton(label, palette == k, Modifier.weight(1f)) { AppSettings.palette.set(k) }
                     }
                 }
@@ -101,20 +101,20 @@ fun SettingsTab() {
         }
 
         AppSectionCard {
-            SectionHeader(Icons.Default.BatteryChargingFull, "Работа в фоне")
+            SectionHeader(Icons.Default.BatteryChargingFull, stringResource(R.string.settings_background))
             if (batteryOk) {
-                Hint("Оптимизация батареи для TgAuto отключена — скрипты могут работать в фоне.")
+                Hint(stringResource(R.string.settings_battery_ok))
             } else {
-                Hint("Android может усыплять скрипты. Отключите оптимизацию батареи для TgAuto.")
-                BigButton("Отключить оптимизацию", Icons.Default.BatterySaver, onClick = { requestIgnoreBattery(context) })
+                Hint(stringResource(R.string.settings_battery_bad))
+                BigButton(stringResource(R.string.settings_battery_btn), Icons.Default.BatterySaver, onClick = { requestIgnoreBattery(context) })
             }
         }
 
         AppSectionCard {
-            SectionHeader(Icons.Default.Info, "О приложении")
+            SectionHeader(Icons.Default.Info, stringResource(R.string.settings_about))
             Text("TgAuto ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface)
-            Hint("Запуск Python-скриптов Telethon на телефоне. Python 3.12 (Chaquopy), Telethon, httpx, python-socks.")
+            Hint(stringResource(R.string.settings_about_text))
         }
         Spacer(Modifier.height(8.dp))
     }
@@ -122,10 +122,10 @@ fun SettingsTab() {
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
-            title = { Text("Удалить все библиотеки?") },
-            text = { Text("Будут удалены все пакеты, установленные кнопкой «Зависимости». Встроенные останутся.") },
-            confirmButton = { TextButton(onClick = { confirmClear = false; LibManager.clearAll() }) { Text("Удалить") } },
-            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Отмена") } }
+            title = { Text(stringResource(R.string.settings_clear_title)) },
+            text = { Text(stringResource(R.string.settings_clear_text)) },
+            confirmButton = { TextButton(onClick = { confirmClear = false; LibManager.clearAll() }) { Text(stringResource(R.string.settings_delete)) } },
+            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.settings_cancel)) } }
         )
     }
 }
@@ -142,15 +142,15 @@ private fun ConfigEditorCard() {
     val error = remember(text) { validateJson(text) }
 
     AppSectionCard {
-        SectionHeader(Icons.Default.DataObject, "Конфиг скрипта (JSON)")
+        SectionHeader(Icons.Default.DataObject, stringResource(R.string.settings_cfg_title))
         if (script == null) {
-            Hint("Скриптов пока нет — выберите папку на вкладке «Скрипты».")
+            Hint(stringResource(R.string.settings_cfg_noscripts))
             return@AppSectionCard
         }
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
             OutlinedTextField(
                 value = script.relPath, onValueChange = {}, readOnly = true, singleLine = true,
-                label = { Text("Скрипт") },
+                label = { Text(stringResource(R.string.settings_cfg_script)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -161,26 +161,26 @@ private fun ConfigEditorCard() {
                 }
             }
         }
-        Hint("Файл ${script.configFile.name} в папке TELESCRIPT_CONFIG_DIR скрипта.")
+        Hint(stringResource(R.string.settings_cfg_file, script.configFile.name))
         OutlinedTextField(
             value = text, onValueChange = { text = it },
             textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp),
             isError = error != null,
-            supportingText = { Text(error ?: "JSON корректен") },
+            supportingText = { Text(error ?: stringResource(R.string.settings_json_ok)) },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 420.dp)
         )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            BigButton("Сохранить", Icons.Default.Save, enabled = error == null, modifier = Modifier.weight(1f), onClick = {
+            BigButton(stringResource(R.string.settings_save), Icons.Default.Save, enabled = error == null, modifier = Modifier.weight(1f), onClick = {
                 runCatching {
                     script.configFile.parentFile?.mkdirs()
                     val pretty = if (text.isBlank()) "{}" else JSONObject(text).toString(2)
                     script.configFile.writeText(pretty + "\n")
                     text = pretty + "\n"
-                }.onSuccess { toast(context, "Конфиг сохранён. Перезапустите скрипт, чтобы применить.") }
-                    .onFailure { toast(context, "Не удалось сохранить: ${it.message}") }
+                }.onSuccess { toast(context, context.getString(R.string.settings_cfg_saved)) }
+                    .onFailure { toast(context, context.getString(R.string.settings_cfg_save_fail, it.message)) }
             })
-            BigButton("Сбросить", Icons.Default.Undo, modifier = Modifier.weight(1f), onClick = { text = readConfig(script) })
+            BigButton(stringResource(R.string.settings_reset), Icons.Default.Undo, modifier = Modifier.weight(1f), onClick = { text = readConfig(script) })
         }
     }
 }
@@ -190,7 +190,7 @@ private fun readConfig(script: ScriptInfo): String =
 
 private fun validateJson(text: String): String? {
     if (text.isBlank()) return null
-    return try { JSONObject(text); null } catch (e: Exception) { "Ошибка JSON: ${e.message}" }
+    return try { JSONObject(text); null } catch (e: Exception) { Str.get(R.string.settings_json_error, e.message ?: "") }
 }
 
 @Composable
@@ -207,9 +207,11 @@ private fun LlmCard() {
     var results by remember { mutableStateOf<Map<String, LlmBridge.Result>>(emptyMap()) }
     var showSteps by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val permDeniedMsg = stringResource(R.string.settings_perm_denied)
+    val promptReply = stringResource(R.string.settings_empty_reply)
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         granted = LlmBridge.hasPermission()
-        if (!granted) toast(context, "Разрешение не выдано. Его можно включить в настройках приложения → Разрешения")
+        if (!granted) toast(context, permDeniedMsg)
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         installed = LlmBridge.termuxInstalled()
@@ -220,8 +222,8 @@ private fun LlmCard() {
     fun Account(name: String, title: String, command: String, onCommand: (String) -> Unit, hint: String) {
         Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface)
-        AppTextField(command, onCommand, "Команда в Termux", placeholder = name, supporting = hint)
-        BigButton("Проверить", Icons.Default.PlayArrow, loading = testing == name,
+        AppTextField(command, onCommand, stringResource(R.string.settings_termux_cmd), placeholder = name, supporting = hint)
+        BigButton(stringResource(R.string.settings_check), Icons.Default.PlayArrow, loading = testing == name,
             enabled = installed && granted && testing == null, onClick = {
                 testing = name
                 scope.launch {
@@ -244,13 +246,13 @@ private fun LlmCard() {
             })
         results[name]?.let { r ->
             val ok = r.exitCode == 0 && r.stdout.isNotBlank()
-            StatusPill(if (ok) "Работает" else "Ошибка (код ${r.exitCode})",
+            StatusPill(if (ok) stringResource(R.string.settings_ok) else stringResource(R.string.settings_err_code, r.exitCode),
                 if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
             LlmBridge.explain(r).takeIf { it.isNotEmpty() }?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
             val text = listOf(r.stdout.trim(), r.stderr.trim()).filter { it.isNotEmpty() }.joinToString("\n")
-                .ifEmpty { "(пустой ответ)" }.take(1500)
+                .ifEmpty { promptReply }.take(1500)
             SelectionContainer {
                 Text(text, style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.onSurface)
@@ -260,14 +262,13 @@ private fun LlmCard() {
 
     AppSectionCard {
         SectionHeader(Icons.Default.AutoAwesome, "LLM")
-        Hint("Скрипты вызывают настоящие Claude Code и Gemini CLI, установленные и авторизованные в Termux. " +
-            "Запросы идут через ваши аккаунты. Команды запускаются без инструментов и MCP.")
-        Text("Порядок", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Hint(stringResource(R.string.settings_llm_hint))
+        Text(stringResource(R.string.settings_order), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         listOf(
-            "both" to "Claude, потом Gemini",
-            "claude" to "Только Claude",
-            "gemini" to "Только Gemini",
-            "api" to "Только API-ключ",
+            "both" to stringResource(R.string.settings_order_both),
+            "claude" to stringResource(R.string.settings_order_claude),
+            "gemini" to stringResource(R.string.settings_order_gemini),
+            "api" to stringResource(R.string.settings_order_api),
         ).chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { (k, label) -> ChoiceButton(label, order == k, Modifier.weight(1f)) { AppSettings.llmOrder.set(k) } }
@@ -276,47 +277,47 @@ private fun LlmCard() {
 
         if (order != "api") {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                StatusPill(if (installed) "Termux установлен" else "Termux не найден",
+                StatusPill(if (installed) stringResource(R.string.settings_termux_installed) else stringResource(R.string.settings_termux_missing),
                     if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-                StatusPill(if (granted) "Доступ есть" else "Нет доступа",
+                StatusPill(if (granted) stringResource(R.string.settings_access_yes) else stringResource(R.string.settings_access_no),
                     if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
             }
             if (installed && !granted) {
-                BigButton("Разрешить запуск команд в Termux", Icons.Default.Key,
+                BigButton(stringResource(R.string.settings_allow_termux), Icons.Default.Key,
                     onClick = { permission.launch(LlmBridge.PERMISSION) })
             }
-            if (order != "gemini") Account("claude", "Claude-аккаунт (Termux)", claudeCmd,
-                { AppSettings.termuxCommand.set(it) }, "Для proot Ubuntu: proot-distro login ubuntu -- claude")
-            if (order != "claude") Account("gemini", "Gemini-аккаунт (Termux)", geminiCmd,
-                { AppSettings.geminiCommand.set(it) }, "Обычно gemini. Настройки «без инструментов» пишутся в ~/.telescript-sandbox/.gemini")
+            if (order != "gemini") Account("claude", stringResource(R.string.settings_claude_acc), claudeCmd,
+                { AppSettings.termuxCommand.set(it) }, stringResource(R.string.settings_claude_hint))
+            if (order != "claude") Account("gemini", stringResource(R.string.settings_gemini_acc), geminiCmd,
+                { AppSettings.geminiCommand.set(it) }, stringResource(R.string.settings_gemini_hint))
             TextButton(onClick = { showSteps = !showSteps }) {
-                Text(if (showSteps) "Скрыть инструкцию" else "Как настроить Termux")
+                Text(if (showSteps) stringResource(R.string.settings_hide_steps) else stringResource(R.string.settings_show_steps))
             }
             if (showSteps) TermuxSteps()
         }
 
-        AppTextField(key, { AppSettings.anthropicKey.set(it.trim()) }, "API-ключ Anthropic (последний запас)",
+        AppTextField(key, { AppSettings.anthropicKey.set(it.trim()) }, stringResource(R.string.settings_api_key),
             secret = true, placeholder = "sk-ant-…",
-            supporting = "Нужен, только если Claude и Gemini недоступны; хранится на телефоне")
-        AppTextField(model, { AppSettings.model.set(it.trim()) }, "Модель",
-            placeholder = "по умолчанию из конфига скрипта",
-            supporting = "Передаётся скриптам как ANTHROPIC_MODEL и записывается в поле «model» конфига")
-        Hint("Изменения применяются при следующем запуске скрипта.")
+            supporting = stringResource(R.string.settings_api_key_hint))
+        AppTextField(model, { AppSettings.model.set(it.trim()) }, stringResource(R.string.settings_model),
+            placeholder = stringResource(R.string.settings_model_ph),
+            supporting = stringResource(R.string.settings_model_hint))
+        Hint(stringResource(R.string.settings_applies_next))
     }
 }
 
 @Composable
 private fun TermuxSteps() {
     val steps = listOf(
-        "Установите Termux из F-Droid или с GitHub (termux/termux-app). Сборка из Google Play устарела." to null,
-        "Claude: установите Node.js и Claude Code. Версии 2.1.113 и новее в Termux не запускаются, нужна 2.1.112:" to
+        stringResource(R.string.settings_step1) to null,
+        stringResource(R.string.settings_step2) to
             "pkg install -y libc++ nodejs\nDISABLE_AUTOUPDATER=1 npm i -g @anthropic-ai/claude-code@2.1.112",
-        "Запустите claude и войдите через аккаунт Claude (ссылка в браузер, код обратно в Termux)." to "claude",
-        "Gemini: установите и войдите через «Login with Google»:" to
+        stringResource(R.string.settings_step3) to "claude",
+        stringResource(R.string.settings_step4) to
             "pkg install -y python make clang\nnpm install -g @google/gemini-cli --ignore-scripts\ngemini",
-        "Разрешите другим приложениям запускать команды в Termux:" to
+        stringResource(R.string.settings_step5) to
             "mkdir -p ~/.termux && echo 'allow-external-apps=true' >> ~/.termux/termux.properties\ntermux-reload-settings",
-        "Нажмите выше «Разрешить запуск команд в Termux», отключите оптимизацию батареи для Termux и нажмите «Проверить»." to null,
+        stringResource(R.string.settings_step6) to null,
     )
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         steps.forEachIndexed { i, (text, code) ->

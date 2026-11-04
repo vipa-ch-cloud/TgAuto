@@ -1,5 +1,8 @@
 package com.v1pach.telescript.ui
 
+import com.v1pach.telescript.R
+import com.v1pach.telescript.Str
+import androidx.compose.ui.res.stringResource
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -69,21 +72,22 @@ fun LogsTab() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Журнал событий", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            Text(stringResource(R.string.logs_title), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface)
             Row {
                 IconButton(onClick = { LogBus.clear() }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Очистить", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.logs_clear), tint = MaterialTheme.colorScheme.primary)
                 }
+                val copiedMsg = stringResource(R.string.logs_copied)
                 IconButton(onClick = {
                     val text = filtered.joinToString("\n") {
                         "${it.time} [${it.source}] ${it.message}" + if (it.count > 1) " (x${it.count})" else ""
                     }
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("TgAuto logs", text))
-                    Toast.makeText(context, "Скопировано", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, copiedMsg, Toast.LENGTH_SHORT).show()
                 }) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Копировать", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.logs_copy), tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -99,7 +103,7 @@ fun LogsTab() {
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(selected = source.isEmpty(), onClick = { source = "" }, label = { Text("Все") },
+                FilterChip(selected = source.isEmpty(), onClick = { source = "" }, label = { Text(stringResource(R.string.logs_all)) },
                     shape = RoundedCornerShape(16.dp))
                 sources.forEach { s ->
                     FilterChip(selected = source == s, onClick = { source = if (source == s) "" else s },
@@ -114,7 +118,7 @@ fun LogsTab() {
                 .background(if (isDark) AppColors.terminalBgDark else AppColors.terminalBg)
         ) {
             if (filtered.isEmpty()) {
-                Text("Пока пусто. Запустите скрипт — здесь появится его вывод.",
+                Text(stringResource(R.string.logs_empty),
                     color = AppColors.terminalText.copy(alpha = 0.5f), fontSize = 13.sp,
                     fontFamily = FontFamily.Monospace, modifier = Modifier.padding(16.dp))
             }

@@ -125,7 +125,7 @@ object ScriptRepository {
         val tree = treeUri() ?: return ""
         val id = runCatching { DocumentsContract.getTreeDocumentId(tree) }.getOrNull() ?: return tree.toString()
         val (volume, path) = id.split(":", limit = 2).let { it[0] to it.getOrElse(1) { "" } }
-        val base = if (volume == "primary") "Память телефона" else volume
+        val base = if (volume == "primary") Str.get(R.string.rep_phone_storage) else volume
         return if (path.isEmpty()) base else "$base/$path"
     }
 
@@ -157,10 +157,10 @@ object ScriptRepository {
         if (!::app.isInitialized) return
         val tree = treeUri()
         if (tree == null) {
-            _scripts.value = emptyList(); _problem.value = "Папка со скриптами не выбрана"; return
+            _scripts.value = emptyList(); _problem.value = Str.get(R.string.rep_no_folder); return
         }
         if (!hasAccess()) {
-            _scripts.value = emptyList(); _problem.value = "Доступ к папке отозван. Выберите её заново"; return
+            _scripts.value = emptyList(); _problem.value = Str.get(R.string.rep_access_revoked); return
         }
         _scanning.value = true
         try {
@@ -175,7 +175,7 @@ object ScriptRepository {
             }.sortedBy { it.relPath.lowercase() }
             _problem.value = ""
         } catch (e: Exception) {
-            _problem.value = "Не удалось прочитать папку: ${e.message}"
+            _problem.value = Str.get(R.string.rep_read_fail, e.message.orEmpty())
             LogBus.e("app", _problem.value)
         } finally {
             _scanning.value = false
@@ -269,8 +269,8 @@ object ScriptRepository {
      * mtime/size changed since the last sync and deleting ones removed from the folder.
      */
     fun sync(script: ScriptInfo) {
-        val tree = treeUri() ?: throw IllegalStateException("папка со скриптами не выбрана")
-        if (!hasAccess()) throw IllegalStateException("доступ к папке отозван, выберите её заново")
+        val tree = treeUri() ?: throw IllegalStateException(Str.get(R.string.rep_ex_no_folder))
+        if (!hasAccess()) throw IllegalStateException(Str.get(R.string.rep_ex_revoked))
         val stateFile = File(Paths.syncState, "${script.id}.json")
         val old = runCatching { JSONObject(stateFile.readText()) }.getOrDefault(JSONObject())
         val now = JSONObject()
@@ -285,7 +285,7 @@ object ScriptRepository {
                 }
                 if (!script.recursive && doc.name.substringAfterLast('.', "").lowercase() !in LOOSE_EXT) continue
                 if (doc.size > MAX_FILE) {
-                    LogBus.w(script.id, "Пропущен большой файл $childRel (${doc.size / 1024 / 1024} МБ)")
+                    LogBus.w(script.id, Str.get(R.string.rep_big_file, childRel, doc.size / 1024 / 1024))
                     continue
                 }
                 val stamp = "${doc.mtime}:${doc.size}"
@@ -296,7 +296,7 @@ object ScriptRepository {
                 val tmp = File(target.parentFile, ".${target.name}.part")
                 app.contentResolver.openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, doc.id))?.use { input ->
                     tmp.outputStream().use { input.copyTo(it) }
-                } ?: throw IllegalStateException("не удалось открыть $childRel")
+                } ?: throw IllegalStateException(Str.get(R.string.rep_ex_open, childRel))
                 if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
                 copied++
             }
@@ -305,8 +305,8 @@ object ScriptRepository {
         var removed = 0
         old.keys().forEach { rel -> if (!now.has(rel) && File(Paths.mirror, rel).delete()) removed++ }
         stateFile.writeText(now.toString())
-        if (!script.entry.isFile) throw IllegalStateException("файл ${script.relPath} не найден в папке")
-        LogBus.emit(script.id, 3, "Синхронизация: обновлено $copied, удалено $removed, всего ${now.length()}")
+        if (!script.entry.isFile) throw IllegalStateException(Str.get(R.string.rep_ex_missing, script.relPath))
+        LogBus.emit(script.id, 3, Str.get(R.string.rep_sync, copied, removed, now.length()))
     }
 }
 
@@ -325,9 +325,9 @@ object ScriptManager {
 
     /** Returns an error message if the script cannot start, else null. */
     fun preflight(): String? = when {
-        !AppSettings.hasApiCredentials() -> "Укажите api_id и api_hash на вкладке «Аккаунт»"
-        !Paths.sessionFile.isFile -> "Сначала войдите в Telegram на вкладке «Аккаунт»"
-        !ScriptRepository.hasAccess() -> "Нет доступа к папке со скриптами: выберите её заново"
+        !AppSettings.hasApiCredentials() -> Str.get(R.string.rep_need_api)
+        !Paths.sessionFile.isFile -> Str.get(R.string.rep_need_login)
+        !ScriptRepository.hasAccess() -> Str.get(R.string.rep_no_access)
         else -> null
     }
 
@@ -346,7 +346,7 @@ object ScriptManager {
             Py.json(Py.host.callAttr("run_script", script.id, script.entry.absolutePath,
                 script.entry.parentFile!!.absolutePath, env.toString(), JSONArray(script.args).toString()))
         } catch (e: Throwable) {
-            LogBus.e(script.id, "Запуск не удался: ${e.message}")
+            LogBus.e(script.id, Str.get(R.string.rep_start_fail, e.message.orEmpty()))
             JSONObject().put("status", "error").put("message", e.message ?: e.toString())
         }
         val error = result.optString("status") == "error"
@@ -363,7 +363,7 @@ object ScriptManager {
             try {
                 Py.host.callAttr("stop_script", id)
             } catch (e: Throwable) {
-                LogBus.e(id, "Ошибка остановки: ${e.message}")
+                LogBus.e(id, Str.get(R.string.rep_stop_fail, e.message.orEmpty()))
             }
         }, "stop-$id").start()
     }
@@ -455,7 +455,7 @@ object LibManager {
                     Paths.sitePackages.absolutePath, abi))
                 ok = result.optString("status") == "ok"
             } catch (e: Throwable) {
-                LogBus.e(script.id, "Установка библиотек не удалась: ${e.message}")
+                LogBus.e(script.id, Str.get(R.string.rep_install_fail, e.message.orEmpty()))
             } finally {
                 _installing.update { it - script.id }
                 refresh()
@@ -475,14 +475,14 @@ object LibManager {
 
     fun remove(name: String) = Thread({
         runCatching { pip.callAttr("remove", Paths.sitePackages.absolutePath, name) }
-            .onFailure { LogBus.e("app", "Удаление $name: ${it.message}") }
-            .onSuccess { LogBus.i("app", "Библиотека $name удалена") }
+            .onFailure { LogBus.e("app", Str.get(R.string.rep_remove_fail, name, it.message.orEmpty())) }
+            .onSuccess { LogBus.i("app", Str.get(R.string.rep_lib_removed, name)) }
         refresh()
     }, "pip-rm").start()
 
     fun clearAll() = Thread({
         runCatching { pip.callAttr("clear", Paths.sitePackages.absolutePath) }
-        LogBus.i("app", "Все установленные библиотеки удалены")
+        LogBus.i("app", Str.get(R.string.rep_all_libs_removed))
         refresh()
     }, "pip-clear").start()
 }

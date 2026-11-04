@@ -10,6 +10,12 @@ import threading
 
 from telethon import TelegramClient, errors
 
+
+def _t(ru, en):
+    """Message in the app language (TGAUTO_LANG is set by the Kotlin side)."""
+    return ru if os.environ.get("TGAUTO_LANG", "ru") == "ru" else en
+
+
 _loop = None
 _loop_lock = threading.Lock()
 _state = {"client": None, "phone": None, "hash": None, "qr": None, "key": None}
@@ -64,7 +70,7 @@ async def _client(session, api_id, api_hash, proxy_json):
 
 
 def _describe(me):
-    name = " ".join(x for x in (me.first_name, me.last_name) if x) or "без имени"
+    name = " ".join(x for x in (me.first_name, me.last_name) if x) or _t("без имени", "unnamed")
     return {"id": me.id, "name": name, "username": me.username or "",
             "phone": ("+" + me.phone) if me.phone else ""}
 
@@ -74,17 +80,17 @@ def _wrap(fn):
         try:
             return fn(*args)
         except errors.FloodWaitError as e:
-            return _err(f"Слишком много попыток, подождите {e.seconds} с")
+            return _err(_t(f"Слишком много попыток, подождите {e.seconds} с", f"Too many attempts, wait {e.seconds} s"))
         except errors.PhoneNumberInvalidError:
-            return _err("Неверный номер телефона")
+            return _err(_t("Неверный номер телефона", "Invalid phone number"))
         except (errors.PhoneCodeInvalidError, errors.PhoneCodeExpiredError):
-            return _err("Неверный или просроченный код")
+            return _err(_t("Неверный или просроченный код", "Invalid or expired code"))
         except errors.PasswordHashInvalidError:
-            return _err("Неверный пароль 2FA")
+            return _err(_t("Неверный пароль 2FA", "Wrong 2FA password"))
         except errors.ApiIdInvalidError:
-            return _err("Неверные api_id / api_hash")
+            return _err(_t("Неверные api_id / api_hash", "Invalid api_id / api_hash"))
         except (asyncio.TimeoutError, TimeoutError):
-            return _err("Нет соединения с Telegram (таймаут). Проверьте прокси")
+            return _err(_t("Нет соединения с Telegram (таймаут). Проверьте прокси", "Cannot reach Telegram (timeout). Check the proxy"))
         except Exception as e:  # noqa: BLE001
             return _err(f"{type(e).__name__}: {e}")
     return inner
@@ -115,7 +121,7 @@ def sign_in_code(code):
     async def go():
         client = _state["client"]
         if client is None or not _state["phone"]:
-            return _err("Сначала запросите код")
+            return _err(_t("Сначала запросите код", "Request a code first"))
         try:
             me = await client.sign_in(_state["phone"], code.strip(),
                                       phone_code_hash=_state["hash"])
@@ -130,7 +136,7 @@ def sign_in_password(password):
     async def go():
         client = _state["client"]
         if client is None:
-            return _err("Нет активного входа")
+            return _err(_t("Нет активного входа", "No sign-in in progress"))
         me = await client.sign_in(password=password)
         return _ok(step="done", **_describe(me))
     return _run(go())
@@ -151,7 +157,7 @@ def qr_wait(seconds):
     async def go():
         qr = _state["qr"]
         if qr is None:
-            return _err("QR не создан")
+            return _err(_t("QR не создан", "QR was not created"))
         try:
             me = await qr.wait(timeout=float(seconds))
         except (asyncio.TimeoutError, TimeoutError):

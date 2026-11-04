@@ -23,6 +23,11 @@ import time
 import traceback
 import weakref
 
+
+def _t(ru, en):
+    """Message in the app language (TGAUTO_LANG is set by the Kotlin side)."""
+    return ru if os.environ.get("TGAUTO_LANG", "ru") == "ru" else en
+
 DEBUG, INFO, WARN, ERROR = 3, 4, 5, 6
 
 _current = contextvars.ContextVar("telescript_script", default=None)
@@ -143,7 +148,7 @@ def _patch_telethon():
     try:
         import telethon
     except Exception as error:  # pragma: no cover - telethon is bundled
-        _emit("app", WARN, f"telethon не загружен: {error}")
+        _emit("app", WARN, _t(f"telethon не загружен: {error}", f"telethon failed to load: {error}"))
         return
     original = telethon.TelegramClient.__init__
 
@@ -196,7 +201,7 @@ def run_script(script_id, entry, work_dir, env_json, args_json):
            "stopping": False}
     with _lock:
         if script_id in _runs:
-            return json.dumps({"status": "error", "message": "уже запущен"})
+            return json.dumps({"status": "error", "message": _t("уже запущен", "already running")})
         _runs[script_id] = run
     token = _current.set(script_id)
     started = time.time()
@@ -212,7 +217,7 @@ def run_script(script_id, entry, work_dir, env_json, args_json):
         os.chdir(work_dir)
         sys.argv = [entry, *args]
         _purge_modules(script_dir)
-        _emit(script_id, INFO, f"▶ запуск {os.path.basename(entry)} {' '.join(args)}".rstrip())
+        _emit(script_id, INFO, _t("▶ запуск", "▶ start") + f" {os.path.basename(entry)} {' '.join(args)}".rstrip())
         runpy.run_path(entry, run_name="__main__")
         result = {"status": "finished"}
     except SystemExit as error:
@@ -220,7 +225,7 @@ def run_script(script_id, entry, work_dir, env_json, args_json):
         if run["stopping"] or code in (None, 0):
             result = {"status": "finished"}
         elif isinstance(code, int):
-            result = {"status": "error", "message": f"код выхода {code}"}
+            result = {"status": "error", "message": _t(f"код выхода {code}", f"exit code {code}")}
         else:
             result = {"status": "error", "message": str(code)}
     except (KeyboardInterrupt, asyncio.CancelledError):
@@ -229,11 +234,15 @@ def run_script(script_id, entry, work_dir, env_json, args_json):
         missing = error.name or str(error)
         import ts_pip
         package = ts_pip.pypi_name(missing)
-        _emit(script_id, ERROR, f"Модуль «{missing}» не найден: его нет ни в папке скрипта, "
-                                f"ни среди встроенных ({BUNDLED}), ни в установленных библиотеках. "
-                                f"Нажмите «Установить зависимости» на карточке скрипта — "
-                                f"будет скачан пакет «{package}» с PyPI.")
-        result = {"status": "error", "message": f"нет модуля {missing}",
+        _emit(script_id, ERROR, _t(f"Модуль «{missing}» не найден: его нет ни в папке скрипта, "
+                                  f"ни среди встроенных ({BUNDLED}), ни в установленных библиотеках. "
+                                  f"Нажмите «Установить зависимости» на карточке скрипта — "
+                                  f"будет скачан пакет «{package}» с PyPI.",
+                                  f"Module \"{missing}\" not found: it is not in the script folder, "
+                                  f"not bundled ({BUNDLED}) and not among installed libraries. "
+                                  f"Tap \"Install dependencies\" on the script card — "
+                                  f"package \"{package}\" will be downloaded from PyPI."))
+        result = {"status": "error", "message": _t(f"нет модуля {missing}", f"no module {missing}"),
                   "missing": missing, "package": package}
     except BaseException as error:  # noqa: BLE001 - report everything to the UI
         if run["stopping"]:
@@ -253,9 +262,9 @@ def run_script(script_id, entry, work_dir, env_json, args_json):
         with _lock:
             _runs.pop(script_id, None)
     if result["status"] == "error":
-        _emit(script_id, ERROR, f"■ остановлен с ошибкой: {result['message']}")
+        _emit(script_id, ERROR, _t("■ остановлен с ошибкой: ", "■ stopped with error: ") + str(result["message"]))
     else:
-        _emit(script_id, INFO, f"■ остановлен ({int(time.time() - started)} с работы)")
+        _emit(script_id, INFO, _t(f"■ остановлен ({int(time.time() - started)} с работы)", f"■ stopped ({int(time.time() - started)} s uptime)"))
     return json.dumps(result, ensure_ascii=False)
 
 

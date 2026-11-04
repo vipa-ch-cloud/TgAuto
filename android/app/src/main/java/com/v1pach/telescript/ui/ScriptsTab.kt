@@ -1,5 +1,8 @@
 package com.v1pach.telescript.ui
 
+import com.v1pach.telescript.R
+import com.v1pach.telescript.Str
+import androidx.compose.ui.res.stringResource
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -61,42 +64,41 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         item {
-            TabHeader("Скрипты") {
+            TabHeader(stringResource(R.string.scripts_title)) {
                 if (scanning) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                 IconButton(onClick = ::rescan, enabled = tree.isNotEmpty()) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Пересканировать", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.scripts_rescan), tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
         item {
             AppSectionCard {
-                SectionHeader(Icons.Default.FolderOpen, "Папка со скриптами")
+                SectionHeader(Icons.Default.FolderOpen, stringResource(R.string.scripts_folder))
                 if (tree.isNotEmpty()) {
                     Text(ScriptRepository.folderLabel(), style = MaterialTheme.typography.bodyMedium,
                         fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurface)
                 } else {
-                    Hint("Выбери папку со скриптами: папку на телефоне, где лежат ваши .py скрипты. Каждый .py в корне — отдельный " +
-                        "скрипт; подпапка с main.py или <имя_папки>.py — скрипт-пакет.")
+                    Hint(stringResource(R.string.scripts_pick_hint))
                 }
                 if (problem.isNotEmpty() && tree.isNotEmpty()) Hint(problem, MaterialTheme.colorScheme.error)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BigButton(if (tree.isEmpty()) "Выбрать папку" else "Сменить папку", Icons.Default.Folder,
+                    BigButton(stringResource(if (tree.isEmpty()) R.string.scripts_pick_folder else R.string.scripts_change_folder), Icons.Default.Folder,
                         onClick = { picker.launch(null) }, modifier = Modifier.weight(1f))
                 }
             }
         }
         if (!batteryOk) item {
             AppSectionCard {
-                SectionHeader(Icons.Default.BatteryAlert, "Работа в фоне")
-                Hint("Чтобы Android не усыплял скрипты, отключите для TgAuto оптимизацию батареи.")
-                BigButton("Отключить оптимизацию", Icons.Default.BatterySaver, onClick = {
+                SectionHeader(Icons.Default.BatteryAlert, stringResource(R.string.scripts_background))
+                Hint(stringResource(R.string.scripts_battery_hint))
+                BigButton(stringResource(R.string.scripts_battery_btn), Icons.Default.BatterySaver, onClick = {
                     requestIgnoreBattery(context)
                 })
             }
         }
         if (tree.isNotEmpty() && problem.isEmpty() && scripts.isEmpty() && !scanning) item {
             AppSectionCard {
-                Hint("В папке нет скриптов. Положите туда .py файлы. Скрипты лежат в отдельном репозитории.")
+                Hint(stringResource(R.string.scripts_empty))
             }
         }
         items(scripts, key = { it.id }) { script ->
@@ -141,11 +143,11 @@ private fun ScriptCard(
 ) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.22f
     val (label, color) = when (state.status) {
-        RunStatus.RUNNING -> "работает" to (if (dark) AppColors.connectedDark else AppColors.connected)
-        RunStatus.STARTING -> "запуск…" to (if (dark) AppColors.warningDark else AppColors.warning)
-        RunStatus.STOPPING -> "остановка…" to (if (dark) AppColors.warningDark else AppColors.warning)
-        RunStatus.ERROR -> "ошибка" to MaterialTheme.colorScheme.error
-        RunStatus.IDLE -> "остановлен" to MaterialTheme.colorScheme.onSurfaceVariant
+        RunStatus.RUNNING -> stringResource(R.string.scripts_status_running) to (if (dark) AppColors.connectedDark else AppColors.connected)
+        RunStatus.STARTING -> stringResource(R.string.scripts_status_starting) to (if (dark) AppColors.warningDark else AppColors.warning)
+        RunStatus.STOPPING -> stringResource(R.string.scripts_status_stopping) to (if (dark) AppColors.warningDark else AppColors.warning)
+        RunStatus.ERROR -> stringResource(R.string.scripts_status_error) to MaterialTheme.colorScheme.error
+        RunStatus.IDLE -> stringResource(R.string.scripts_status_idle) to MaterialTheme.colorScheme.onSurfaceVariant
     }
     var uptime by remember { mutableStateOf("") }
     LaunchedEffect(state.status, state.startedAt) {
@@ -175,24 +177,24 @@ private fun ScriptCard(
             Hint(state.message, MaterialTheme.colorScheme.error)
         }
         if (state.status == RunStatus.ERROR && state.missingPackage.isNotBlank()) {
-            BigButton("Установить «${state.missingPackage}»", Icons.Default.Download,
+            BigButton(stringResource(R.string.scripts_install_pkg, state.missingPackage), Icons.Default.Download,
                 onClick = { onInstall(listOf(state.missingPackage)) }, loading = installing, enabled = !installing)
         }
         val active = state.status == RunStatus.RUNNING || state.status == RunStatus.STARTING
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (active || state.status == RunStatus.STOPPING) {
-                BigButton("Остановить", Icons.Default.Stop, onClick = onStop, modifier = Modifier.weight(1f),
+                BigButton(stringResource(R.string.scripts_stop), Icons.Default.Stop, onClick = onStop, modifier = Modifier.weight(1f),
                     danger = true, enabled = state.status != RunStatus.STOPPING,
                     loading = state.status == RunStatus.STOPPING)
             } else {
-                BigButton("Запустить", Icons.Default.PlayArrow, onClick = onStart, modifier = Modifier.weight(1f),
+                BigButton(stringResource(R.string.scripts_start), Icons.Default.PlayArrow, onClick = onStart, modifier = Modifier.weight(1f),
                     enabled = !installing)
             }
-            BigButton("Зависимости", Icons.Default.Download, onClick = { onInstall(emptyList()) },
+            BigButton(stringResource(R.string.scripts_deps), Icons.Default.Download, onClick = { onInstall(emptyList()) },
                 modifier = Modifier.weight(1f), enabled = !installing && !active, loading = installing)
         }
         if (script.schemaDocId.isNotEmpty()) {
-            BigButton("Конфиг", Icons.Default.Tune, onClick = onConfig)
+            BigButton(stringResource(R.string.cfg_title), Icons.Default.Tune, onClick = onConfig)
         }
     }
 }
@@ -200,8 +202,8 @@ private fun ScriptCard(
 private fun formatUptime(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
     return when {
-        s >= 86400 -> "%dд %dч".format(s / 86400, s % 86400 / 3600)
-        s >= 3600 -> "%dч %02dм".format(s / 3600, s % 3600 / 60)
+        s >= 86400 -> Str.get(R.string.scripts_uptime_dh, s / 86400, s % 86400 / 3600)
+        s >= 3600 -> Str.get(R.string.scripts_uptime_hm, s / 3600, s % 3600 / 60)
         else -> "%d:%02d".format(s / 60, s % 60)
     }
 }

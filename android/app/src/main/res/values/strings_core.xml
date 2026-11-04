@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cs_need_int">Whole number required</string>
+    <string name="cs_need_number">Number required</string>
+    <string name="cs_pick_value">Choose a value</string>
+    <string name="cs_min">Not less than %1$s</string>
+    <string name="cs_max">Not more than %1$s</string>
+    <string name="cs_bad_file">Invalid settings file: %1$s</string>
+    <string name="cs_corrupt">File %1$s is corrupted, saving disabled</string>
+    <string name="cs_nested">%1$s: in file %2$s \"%3$s\" is nested inside a non-object</string>
+    <string name="cs_write_fail">Could not write %1$s: %2$s</string>
+    <string name="svc_starting">Starting…</string>
+    <string name="svc_running">Running: %1$s</string>
+    <string name="svc_stop_all">Stop all</string>
+    <string name="svc_channel">Running scripts</string>
+    <string name="llm_bridge_err">Bridge: %1$s</string>
+    <string name="llm_no_termux">Termux is not installed</string>
+    <string name="llm_no_perm">Missing \"Run commands in Termux\" permission</string>
+    <string name="llm_timeout">Termux did not respond within %1$s s</string>
+    <string name="llm_start_fail">Could not run the command in Termux: %1$s</string>
+    <string name="llm_bad_interp">Script interpreter not found (bad interpreter): in Termux run pkg install nodejs libc++ and reinstall the CLI.</string>
+    <string name="llm_not_found">Command not found in Termux: the CLI is not installed (see the guide).</string>
+    <string name="llm_need_login">Login required: run the CLI in Termux and sign in.</string>
+    <string name="llm_empty">Empty reply.</string>
+    <string name="llm_exit_code">The command exited with code %1$s.</string>
+    <string name="llm_empty_result">Termux returned an empty result</string>
+    <string name="rep_phone_storage">Phone storage</string>
+    <string name="rep_no_folder">Scripts folder is not selected</string>
+    <string name="rep_access_revoked">Folder access was revoked. Select it again</string>
+    <string name="rep_read_fail">Could not read the folder: %1$s</string>
+    <string name="rep_ex_no_folder">scripts folder is not selected</string>
+    <string name="rep_ex_revoked">folder access was revoked, select it again</string>
+    <string name="rep_big_file">Skipped large file %1$s (%2$s MB)</string>
+    <string name="rep_ex_open">could not open %1$s</string>
+    <string name="rep_ex_missing">file %1$s not found in the folder</string>
+    <string name="rep_sync">Sync: updated %1$s, removed %2$s, total %3$s</string>
+    <string name="rep_need_api">Enter api_id and api_hash on the Account tab</string>
+    <string name="rep_need_login">Sign in to Telegram on the Account tab first</string>
+    <string name="rep_no_access">No access to the scripts folder: select it again</string>
+    <string name="rep_start_fail">Start failed: %1$s</string>
+    <string name="rep_stop_fail">Stop error: %1$s</string>
+    <string name="rep_install_fail">Library installation failed: %1$s</string>
+    <string name="rep_remove_fail">Removing %1$s: %2$s</string>
+    <string name="rep_lib_removed">Library %1$s removed</string>
+    <string name="rep_all_libs_removed">All installed libraries removed</string>
+</resources>

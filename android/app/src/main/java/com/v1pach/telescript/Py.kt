@@ -11,6 +11,9 @@ object Py {
     val host: PyObject
         get() {
             val module = Python.getInstance().getModule("ts_host")
+            // Tell the Python layer which language to use for user-visible messages.
+            Python.getInstance().getModule("os").get("environ")
+                ?.callAttr("__setitem__", "TGAUTO_LANG", if (Str.isRu()) "ru" else "en")
             if (!hostReady) synchronized(this) {
                 if (!hostReady) {
                     module.callAttr("init", LogBus)

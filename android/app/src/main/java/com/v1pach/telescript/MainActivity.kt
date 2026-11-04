@@ -1,5 +1,6 @@
 package com.v1pach.telescript
 
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
@@ -97,10 +98,10 @@ private fun MainContent() {
     var dragProgress by remember { mutableFloatStateOf(0f) }
     val density = LocalDensity.current
     val navItems = listOf(
-        NavItem("Скрипты", Icons.Default.Code),
-        NavItem("Аккаунт", Icons.Default.AccountCircle),
-        NavItem("Логи", Icons.Default.Terminal),
-        NavItem("Настройки", Icons.Default.Settings),
+        NavItem(stringResource(R.string.nav_scripts), Icons.Default.Code),
+        NavItem(stringResource(R.string.nav_account), Icons.Default.AccountCircle),
+        NavItem(stringResource(R.string.nav_logs), Icons.Default.Terminal),
+        NavItem(stringResource(R.string.nav_settings), Icons.Default.Settings),
     )
     val safeBottomInset = with(density) { WindowInsets.safeDrawing.getBottom(density).toDp() }
     val navOverlayReserve = safeBottomInset + 96.dp

@@ -82,7 +82,7 @@ class ScriptService : Service() {
         val stopAll = PendingIntent.getService(this, 1,
             Intent(this, ScriptService::class.java).setAction(ACTION_STOP_ALL),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val text = if (running.isEmpty()) "Запуск…" else "Работают: " + running.sorted().joinToString(", ")
+        val text = if (running.isEmpty()) getString(R.string.svc_starting) else getString(R.string.svc_running, running.sorted().joinToString(", "))
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_plane)
             .setContentTitle("TgAuto")
@@ -91,7 +91,7 @@ class ScriptService : Service() {
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setContentIntent(open)
-            .addAction(0, "Остановить всё", stopAll)
+            .addAction(0, getString(R.string.svc_stop_all), stopAll)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
@@ -105,7 +105,7 @@ class ScriptService : Service() {
         const val EXTRA_ID = "id"
 
         fun createChannel(context: Context) {
-            val channel = NotificationChannel(CHANNEL_ID, "Работающие скрипты", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(CHANNEL_ID, context.getString(R.string.svc_channel), NotificationManager.IMPORTANCE_LOW)
             channel.setShowBadge(false)
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }

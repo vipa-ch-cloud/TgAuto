@@ -1,3 +1,5 @@
+Русский | [English](README.en.md)
+
 # TgAuto
 
 Скрипты: https://github.com/vipa-ch-cloud/TgAutoS
@@ -5,7 +7,7 @@
 TgAuto is an Android app that runs Python Telegram (Telethon) userbot scripts on the phone, no root needed.
 
 ## Что это
-Приложение запускает ваши Python-скрипты для Telegram прямо на телефоне и умеет подключать к ним LLM. Интерфейс на русском, Material You.
+Приложение запускает ваши Python-скрипты для Telegram прямо на телефоне и умеет подключать к ним LLM. Интерфейс на русском и английском (по языку системы), Material You.
 
 ## Возможности
 - Запуск скриптов Telethon на встроенном Python 3.12 (Chaquopy), фоновая работа через foreground-сервис.
@@ -22,7 +24,7 @@ TgAuto is an Android app that runs Python Telegram (Telethon) userbot scripts on
 Скриншоты будут добавлены позже.
 
 ## Установка
-Подробная инструкция для пользователя: [GUIDE.md](GUIDE.md).
+Подробная инструкция для пользователя: [GUIDE.md](GUIDE.md) ([English](GUIDE.en.md)).
 Готовые APK: `TgAuto-<версия>.apk` (стабильная) и `TgAuto-nightly-<версия>.apk` (Nightly, ставится рядом).
 
 ## Сборка
@@ -38,4 +40,4 @@ APK: `android/app/build/outputs/apk/{stable,nightly}/debug/`.
 Имя приложения TgAuto, но внутренний applicationId остался `com.v1pach.telescript` (Nightly добавляет `.nightly`), а переменные окружения для скриптов называются `TELESCRIPT_*`. Это сделано намеренно, чтобы обновления сохраняли данные пользователей.
 
 ## Лицензия
-Лицензия будет выбрана автором.
+Проект распространяется по лицензии GNU GPL v3 или новее (GPL-3.0-or-later). Полный текст в файле [LICENSE](LICENSE).

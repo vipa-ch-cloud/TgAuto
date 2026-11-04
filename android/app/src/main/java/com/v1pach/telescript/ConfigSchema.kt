@@ -50,18 +50,18 @@ class FieldForm(val field: CfgField) {
         return when (f.type) {
             "bool" -> flag to null
             "int" -> {
-                val n = text.trim().toLongOrNull() ?: return null to "Нужно целое число"
+                val n = text.trim().toLongOrNull() ?: return null to Str.get(R.string.cs_need_int)
                 rangeError(n.toDouble())?.let { return null to it }
                 n to null
             }
             "float" -> {
                 val n = text.trim().replace(',', '.').toDoubleOrNull()
-                if (n == null || n.isNaN() || n.isInfinite()) return null to "Нужно число"
+                if (n == null || n.isNaN() || n.isInfinite()) return null to Str.get(R.string.cs_need_number)
                 rangeError(n)?.let { return null to it }
                 n to null
             }
             "select" -> {
-                if (f.options.none { it.first == text }) null to "Выберите значение" else text to null
+                if (f.options.none { it.first == text }) null to Str.get(R.string.cs_pick_value) else text to null
             }
             "list" -> JSONArray(items.map { it.trim() }.filter { it.isNotEmpty() }) to null
             "text" -> text to null
@@ -70,8 +70,8 @@ class FieldForm(val field: CfgField) {
     }
 
     private fun rangeError(n: Double): String? {
-        field.min?.let { if (n < it) return "Не меньше ${fmt(it)}" }
-        field.max?.let { if (n > it) return "Не больше ${fmt(it)}" }
+        field.min?.let { if (n < it) return Str.get(R.string.cs_min, fmt(it)) }
+        field.max?.let { if (n > it) return Str.get(R.string.cs_max, fmt(it)) }
         return null
     }
 
@@ -138,7 +138,7 @@ object ConfigStore {
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
             if (!o.has("key")) {
-                o.optString("section").takeIf { it.isNotBlank() }?.let { items += CfgSection(it) }
+                loc(o, "section").takeIf { it.isNotBlank() }?.let { items += CfgSection(it) }
                 continue
             }
             val key = o.getString("key")
@@ -149,19 +149,25 @@ object ConfigStore {
             val opts = o.optJSONArray("options")?.let { a ->
                 List(a.length()) { j ->
                     val e = a.get(j)
-                    if (e is JSONObject) e.getString("value") to e.optString("title", e.getString("value"))
+                    if (e is JSONObject) e.getString("value") to loc(e, "title", e.getString("value"))
                     else e.toString() to e.toString()
                 }
             }.orEmpty()
             if (type == "select" && opts.isEmpty()) continue
-            items += CfgField(key, file, o.optString("title", key), o.optString("description", ""), type,
+            items += CfgField(key, file, loc(o, "title", key), loc(o, "description", ""), type,
                 if (o.has("default")) o.get("default") else null,
                 if (o.has("min")) o.getDouble("min") else null,
                 if (o.has("max")) o.getDouble("max") else null, opts)
         }
-        val schema = ConfigSchema(root.optString("note", ""), items)
+        val schema = ConfigSchema(loc(root, "note", ""), items)
         if (schema.fields.isEmpty()) null else schema
     }.getOrNull()
+
+    /** Value of [key], or of "[key]_en" when the UI language is not Russian and that key is non-blank. */
+    private fun loc(o: JSONObject, key: String, def: String = ""): String {
+        if (!Str.isRu()) o.optString(key + "_en", "").takeIf { it.isNotBlank() }?.let { return it }
+        return o.optString(key, def)
+    }
 
     private fun validFile(name: String): Boolean =
         name.isNotEmpty() && name.endsWith(".json") && !name.startsWith("/") && !name.startsWith(".") &&
@@ -179,10 +185,10 @@ object ConfigStore {
     fun readAll(configDir: File, schema: ConfigSchema): Pair<Map<String, JSONObject>, String?> {
         val out = HashMap<String, JSONObject>()
         for (name in schema.fields.map { it.file }.distinct()) {
-            val f = fileOf(configDir, name) ?: return out to "Недопустимый файл настроек: $name"
+            val f = fileOf(configDir, name) ?: return out to Str.get(R.string.cs_bad_file, name)
             if (!f.isFile) { out[name] = JSONObject(); continue }
             out[name] = runCatching { JSONObject(f.readText(Charsets.UTF_8)) }.getOrNull()
-                ?: return out to "Файл $name повреждён, сохранение отключено"
+                ?: return out to Str.get(R.string.cs_corrupt, name)
         }
         return out to null
     }
@@ -195,13 +201,13 @@ object ConfigStore {
         val byFile = values.groupBy { it.first.file }
         val docs = HashMap<String, JSONObject>()
         for ((name, entries) in byFile) {
-            val f = fileOf(configDir, name) ?: return "Недопустимый файл настроек: $name"
+            val f = fileOf(configDir, name) ?: return Str.get(R.string.cs_bad_file, name)
             val doc = if (f.isFile) {
                 runCatching { JSONObject(f.readText(Charsets.UTF_8)) }.getOrNull()
-                    ?: return "Файл $name повреждён, сохранение отключено"
+                    ?: return Str.get(R.string.cs_corrupt, name)
             } else JSONObject()
             for ((field, value) in entries) {
-                if (!put(doc, field.key.split('.'), value)) return "${field.title}: в файле $name «${field.key}» вложено в не-объект"
+                if (!put(doc, field.key.split('.'), value)) return Str.get(R.string.cs_nested, field.title, name, field.key)
             }
             docs[name] = doc
         }
@@ -216,7 +222,7 @@ object ConfigStore {
                 } catch (e: Exception) {
                     Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 }
-            }.onFailure { return "Не удалось записать $name: ${it.message}" }
+            }.onFailure { return Str.get(R.string.cs_write_fail, name, it.message.orEmpty()) }
         }
         return null
     }

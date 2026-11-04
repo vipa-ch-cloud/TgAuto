@@ -1,5 +1,8 @@
 package com.v1pach.telescript.ui
 
+import com.v1pach.telescript.R
+import com.v1pach.telescript.Str
+import androidx.compose.ui.res.stringResource
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -76,12 +79,12 @@ object AccountState {
             phone = r.optString("phone"), userId = r.optLong("id"), qrUrl = "") }
         // Free the session file so scripts can open it.
         Py.loginCall("release")
-        LogBus.i("app", "Вход выполнен: ${r.optString("name")}")
+        LogBus.i("app", Str.get(R.string.account_login_done, r.optString("name")))
     }
 
     private fun failed(r: JSONObject): Boolean {
         if (r.optString("status") == "ok") return false
-        set { copy(error = r.optString("message", "ошибка")) }
+        set { copy(error = r.optString("message", Str.get(R.string.account_error_default))) }
         return true
     }
 
@@ -160,13 +163,13 @@ object AccountState {
 
     fun logout() = call {
         if (ScriptManager.runningIds().isNotEmpty()) {
-            set { copy(error = "Сначала остановите все скрипты") }
+            set { copy(error = Str.get(R.string.account_stop_scripts_first)) }
             return@call
         }
         if (AppSettings.hasApiCredentials()) Py.loginCall("logout", *creds())
         Paths.sessionFile.delete()
         set { Ui(step = Step.LOGGED_OUT) }
-        LogBus.i("app", "Выход из аккаунта")
+        LogBus.i("app", Str.get(R.string.account_logged_out_log))
     }
 }
 
@@ -186,7 +189,7 @@ fun AccountTab() {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        TabHeader("Аккаунт")
+        TabHeader(stringResource(R.string.account_title))
 
         // --- Login card
         AppSectionCard {
@@ -198,7 +201,7 @@ fun AccountTab() {
         // --- API credentials
         AppSectionCard {
             SectionHeader(Icons.Default.Key, "API Telegram")
-            Hint("Получите api_id и api_hash на my.telegram.org → API development tools.")
+            Hint(stringResource(R.string.account_api_hint))
             AppTextField(apiId, { AppSettings.apiId.set(it.filter(Char::isDigit)) }, "api_id",
                 keyboardType = KeyboardType.Number, enabled = ui.step != AccountState.Step.LOGGED_IN || !credsOk)
             AppTextField(apiHash, { AppSettings.apiHash.set(it.trim()) }, "api_hash", secret = true,
@@ -207,29 +210,28 @@ fun AccountTab() {
 
         // --- Proxy
         AppSectionCard {
-            SectionHeader(Icons.Default.VpnLock, "Прокси")
+            SectionHeader(Icons.Default.VpnLock, stringResource(R.string.account_proxy))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("none" to "Нет", "socks5" to "SOCKS5", "mtproxy" to "MTProxy").forEach { (key, label) ->
+                listOf("none" to stringResource(R.string.account_proxy_none), "socks5" to "SOCKS5", "mtproxy" to "MTProxy").forEach { (key, label) ->
                     ChoiceButton(label, proxyType == key, Modifier.weight(1f)) { AppSettings.proxyType.set(key) }
                 }
             }
             if (proxyType != "none") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AppTextField(proxyHost, { AppSettings.proxyHost.set(it.trim()) }, "Хост", Modifier.weight(2f))
-                    AppTextField(proxyPort, { AppSettings.proxyPort.set(it.filter(Char::isDigit).take(5)) }, "Порт",
+                    AppTextField(proxyHost, { AppSettings.proxyHost.set(it.trim()) }, stringResource(R.string.account_host), Modifier.weight(2f))
+                    AppTextField(proxyPort, { AppSettings.proxyPort.set(it.filter(Char::isDigit).take(5)) }, stringResource(R.string.account_port),
                         Modifier.weight(1f), keyboardType = KeyboardType.Number)
                 }
                 if (proxyType == "mtproxy") {
                     AppTextField(proxySecret, { AppSettings.proxySecret.set(it.trim()) }, "Secret", secret = true)
                     val fakeTls = proxySecret.trim().lowercase().startsWith("ee")
                     Hint(
-                        if (fakeTls) "Secret начинается с «ee» (fake-TLS): Telethon такие прокси не поддерживает. " +
-                            "Используйте secret с префиксом «dd» или обычный, либо SOCKS5."
-                        else "Поддерживаются обычные и «dd» секреты. Fake-TLS («ee…») Telethon не умеет.",
+                        if (fakeTls) stringResource(R.string.account_fake_tls_bad)
+                        else stringResource(R.string.account_fake_tls_ok),
                         if (fakeTls) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Hint("Прокси используется и для входа, и для запущенных скриптов (proxy.json / TELESCRIPT_PROXY).")
+                Hint(stringResource(R.string.account_proxy_hint))
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -245,10 +247,10 @@ private fun ColumnScope.LoginSection(ui: AccountState.Ui, credsOk: Boolean) {
     when (ui.step) {
         AccountState.Step.CHECKING -> Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            Spacer(Modifier.width(12.dp)); Text("Проверка сессии…")
+            Spacer(Modifier.width(12.dp)); Text(stringResource(R.string.account_checking))
         }
         AccountState.Step.LOGGED_IN -> {
-            StatusPill("вход выполнен", if (dark) AppColors.connectedDark else AppColors.connected)
+            StatusPill(stringResource(R.string.account_signed_in_pill), if (dark) AppColors.connectedDark else AppColors.connected)
             if (ui.name.isNotBlank()) {
                 Text(ui.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface)
@@ -259,59 +261,59 @@ private fun ColumnScope.LoginSection(ui: AccountState.Ui, credsOk: Boolean) {
                 ).joinToString(" · ")
                 if (details.isNotBlank()) Hint(details)
             } else {
-                Hint("Сессия сохранена. Скрипты запускаются от этого аккаунта.")
+                Hint(stringResource(R.string.account_session_saved))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                BigButton("Обновить", Icons.Default.Refresh, onClick = { AccountState.check() },
+                BigButton(stringResource(R.string.account_refresh), Icons.Default.Refresh, onClick = { AccountState.check() },
                     modifier = Modifier.weight(1f), enabled = credsOk, loading = ui.busy)
-                BigButton("Выйти", Icons.AutoMirrored.Filled.Logout, onClick = { AccountState.logout() },
+                BigButton(stringResource(R.string.account_logout), Icons.AutoMirrored.Filled.Logout, onClick = { AccountState.logout() },
                     modifier = Modifier.weight(1f), danger = true, enabled = !ui.busy)
             }
         }
         AccountState.Step.LOGGED_OUT -> {
-            if (!credsOk) Hint("Сначала заполните api_id и api_hash ниже.", MaterialTheme.colorScheme.error)
-            AppTextField(phone, { phone = it.filter { c -> c.isDigit() || c == '+' } }, "Номер телефона",
+            if (!credsOk) Hint(stringResource(R.string.account_fill_api), MaterialTheme.colorScheme.error)
+            AppTextField(phone, { phone = it.filter { c -> c.isDigit() || c == '+' } }, stringResource(R.string.account_phone),
                 placeholder = "+79991234567", keyboardType = KeyboardType.Phone, enabled = credsOk && !ui.busy)
-            BigButton("Получить код", Icons.AutoMirrored.Filled.Send, onClick = { AccountState.sendCode(phone) },
+            BigButton(stringResource(R.string.account_get_code), Icons.AutoMirrored.Filled.Send, onClick = { AccountState.sendCode(phone) },
                 enabled = credsOk && phone.length >= 8, loading = ui.busy)
             TextButton(onClick = { AccountState.startQr() }, enabled = credsOk && !ui.busy,
                 modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp)); Text("Войти по QR-коду")
+                Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.account_qr_login))
             }
         }
         AccountState.Step.CODE -> {
-            Hint("Код отправлен в Telegram (или по SMS) на $phone.")
-            AppTextField(code, { code = it.filter(Char::isDigit).take(8) }, "Код из Telegram",
+            Hint(stringResource(R.string.account_code_sent, phone))
+            AppTextField(code, { code = it.filter(Char::isDigit).take(8) }, stringResource(R.string.account_code_field),
                 keyboardType = KeyboardType.Number, enabled = !ui.busy)
-            BigButton("Войти", Icons.AutoMirrored.Filled.Login, onClick = { AccountState.signInCode(code) },
+            BigButton(stringResource(R.string.account_sign_in), Icons.AutoMirrored.Filled.Login, onClick = { AccountState.signInCode(code) },
                 enabled = code.length >= 5, loading = ui.busy)
             TextButton(onClick = { code = ""; AccountState.cancel() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text("Отмена")
+                Text(stringResource(R.string.common_cancel))
             }
         }
         AccountState.Step.PASSWORD -> {
-            Hint("На аккаунте включена двухэтапная аутентификация. Введите облачный пароль.")
-            AppTextField(password, { password = it }, "Пароль 2FA", secret = true, enabled = !ui.busy)
-            BigButton("Подтвердить", Icons.Default.Lock, onClick = { AccountState.signInPassword(password) },
+            Hint(stringResource(R.string.account_2fa_hint))
+            AppTextField(password, { password = it }, stringResource(R.string.account_2fa_password), secret = true, enabled = !ui.busy)
+            BigButton(stringResource(R.string.account_confirm), Icons.Default.Lock, onClick = { AccountState.signInPassword(password) },
                 enabled = password.isNotEmpty(), loading = ui.busy)
             TextButton(onClick = { password = ""; AccountState.cancel() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text("Отмена")
+                Text(stringResource(R.string.common_cancel))
             }
         }
         AccountState.Step.QR -> {
-            Hint("Telegram на другом устройстве → Настройки → Устройства → Подключить устройство, и отсканируйте код.")
+            Hint(stringResource(R.string.account_qr_hint))
             val bitmap = remember(ui.qrUrl) { if (ui.qrUrl.isBlank()) null else qrBitmap(ui.qrUrl, 600) }
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (bitmap != null) {
-                    Image(bitmap.asImageBitmap(), contentDescription = "QR-код входа",
+                    Image(bitmap.asImageBitmap(), contentDescription = stringResource(R.string.account_qr_desc),
                         filterQuality = FilterQuality.None,
                         modifier = Modifier.size(240.dp).clip(RoundedCornerShape(20.dp)).background(Color.White).padding(12.dp))
                 } else CircularProgressIndicator()
             }
-            Hint("Код обновляется автоматически.")
+            Hint(stringResource(R.string.account_qr_auto))
             TextButton(onClick = { AccountState.cancel() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text("Отмена")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     }

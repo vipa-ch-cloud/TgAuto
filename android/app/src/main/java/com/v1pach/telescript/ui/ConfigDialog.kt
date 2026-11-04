@@ -1,5 +1,8 @@
 package com.v1pach.telescript.ui
 
+import com.v1pach.telescript.R
+import com.v1pach.telescript.Str
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,7 +35,7 @@ fun ConfigDialog(script: ScriptInfo, running: Boolean, onClose: () -> Unit) {
         val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val text = ScriptRepository.readSchema(script)
             val parsed = text?.let { ConfigStore.parse(it) }
-            if (parsed == null) return@withContext Triple(null, emptyMap<String, org.json.JSONObject>(), "Не удалось прочитать config.schema.json")
+            if (parsed == null) return@withContext Triple(null, emptyMap<String, org.json.JSONObject>(), Str.get(R.string.cfg_schema_unreadable))
             val (docs, err) = ConfigStore.readAll(script.configDir, parsed)
             Triple(parsed, docs, err ?: "")
         }
@@ -54,16 +57,16 @@ fun ConfigDialog(script: ScriptInfo, running: Boolean, onClose: () -> Unit) {
                 .padding(horizontal = 16.dp)) {
                 Row(Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Конфиг", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.cfg_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(script.title, style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "Закрыть") }
+                    IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cfg_close)) }
                 }
                 if (loading) {
                     Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else if (schema == null) {
-                    Hint(loadError.ifEmpty { "Схема не найдена" }, MaterialTheme.colorScheme.error)
+                    Hint(loadError.ifEmpty { stringResource(R.string.cfg_schema_missing) }, MaterialTheme.colorScheme.error)
                     Spacer(Modifier.weight(1f))
                 } else {
                     val blocked = loadError.isNotEmpty()
@@ -71,8 +74,8 @@ fun ConfigDialog(script: ScriptInfo, running: Boolean, onClose: () -> Unit) {
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp),
                         contentPadding = PaddingValues(bottom = 12.dp)) {
                         item {
-                            val note = sch.note.ifBlank { "Настройки применятся после перезапуска скрипта." }
-                            Hint(note + if (running) " Скрипт сейчас работает." else "")
+                            val note = sch.note.ifBlank { stringResource(R.string.cfg_note_default) }
+                            Hint(note + if (running) stringResource(R.string.cfg_running_suffix) else "")
                             if (blocked) Hint(loadError, MaterialTheme.colorScheme.error)
                         }
                         var formIndex = 0
@@ -92,11 +95,11 @@ fun ConfigDialog(script: ScriptInfo, running: Boolean, onClose: () -> Unit) {
                     }
                     if (saveError.isNotEmpty()) Hint(saveError, MaterialTheme.colorScheme.error)
                     if (saved && !anyDirty) Hint(
-                        if (running) "Сохранено. Перезапустите скрипт, чтобы применить." else "Сохранено.")
+                        stringResource(if (running) R.string.cfg_saved_restart else R.string.cfg_saved))
                     Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        BigButton("Сбросить к умолчаниям", Icons.Default.RestartAlt, modifier = Modifier.weight(1f),
+                        BigButton(stringResource(R.string.cfg_reset), Icons.Default.RestartAlt, modifier = Modifier.weight(1f),
                             enabled = !blocked, onClick = { forms.forEach { it.setDefault() }; saved = false; saveError = "" })
-                        BigButton("Сохранить", Icons.Default.Save, modifier = Modifier.weight(1f),
+                        BigButton(stringResource(R.string.common_save), Icons.Default.Save, modifier = Modifier.weight(1f),
                             enabled = !blocked && anyDirty && !hasError, onClick = {
                                 val values = forms.filter { it.dirty }.map { it.field to it.parse().first }
                                 val error = ConfigStore.save(script.configDir, values)
@@ -132,7 +135,7 @@ private fun FieldEditor(form: FieldForm, error: String?, enabled: Boolean) {
                 Text(f.title, style = MaterialTheme.typography.bodyLarge)
                 var open by remember { mutableStateOf(false) }
                 val current = f.options.firstOrNull { it.first == form.text }?.second
-                    ?: if (form.foreign.isNotEmpty()) "Сейчас: ${form.foreign}" else "Не выбрано"
+                    ?: if (form.foreign.isNotEmpty()) stringResource(R.string.cfg_current, form.foreign) else stringResource(R.string.cfg_not_selected)
                 Box {
                     OutlinedButton(onClick = { open = true }, enabled = enabled, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                         Text(current, modifier = Modifier.weight(1f), maxLines = 1)
@@ -153,17 +156,17 @@ private fun FieldEditor(form: FieldForm, error: String?, enabled: Boolean) {
                 if (f.description.isNotBlank()) Hint(f.description)
                 form.items.forEachIndexed { i, item ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AppTextField(item, { form.items[i] = it; form.dirty = true }, "Пункт ${i + 1}",
+                        AppTextField(item, { form.items[i] = it; form.dirty = true }, stringResource(R.string.cfg_item, i + 1),
                             modifier = Modifier.weight(1f), enabled = enabled)
                         IconButton(onClick = { form.items.removeAt(i); form.dirty = true }, enabled = enabled) {
-                            Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cfg_delete))
                         }
                     }
                 }
                 OutlinedButton(onClick = { form.items.add(""); form.dirty = true }, enabled = enabled) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Добавить")
+                    Text(stringResource(R.string.cfg_add))
                 }
             }
             else -> AppTextField(form.text, { form.text = it; form.dirty = true }, f.title,
