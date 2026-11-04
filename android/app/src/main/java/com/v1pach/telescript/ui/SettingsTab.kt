@@ -244,6 +244,9 @@ private fun LlmCard() {
             val ok = r.exitCode == 0 && r.stdout.isNotBlank()
             StatusPill(if (ok) "Работает" else "Ошибка (код ${r.exitCode})",
                 if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+            LlmBridge.explain(r).takeIf { it.isNotEmpty() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            }
             val text = listOf(r.stdout.trim(), r.stderr.trim()).filter { it.isNotEmpty() }.joinToString("\n")
                 .ifEmpty { "(пустой ответ)" }.take(1500)
             SelectionContainer {

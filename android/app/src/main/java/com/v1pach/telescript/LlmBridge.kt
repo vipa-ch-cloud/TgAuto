@@ -136,7 +136,17 @@ object LlmBridge {
             val prepare = if (name == "gemini")
                 "mkdir -p .gemini && printf '%s' '$GEMINI_SETTINGS' > .gemini/settings.json && export GEMINI_CLI_TRUST_WORKSPACE=true && "
             else ""
-            val script = "mkdir -p ~/.telescript-sandbox && cd ~/.telescript-sandbox && ${prepare}exec $cmd \"\$@\""
+            // Termux's own environment: without termux-exec in LD_PRELOAD a `#!/usr/bin/env node`
+            // shebang fails ("bad interpreter"), so npm CLIs are started as `node <script>`.
+            val pfx = "/data/data/com.termux/files/usr"
+            val env = "export PATH=$pfx/bin:\$PATH; " +
+                "for l in libtermux-exec-ld-preload.so libtermux-exec.so; do " +
+                "[ -e $pfx/lib/\$l ] && { export LD_PRELOAD=$pfx/lib/\$l; break; }; done; "
+            val run = if (cmd == name)
+                "bin=\$(command -v $name) || { echo '$name: не установлен в Termux' >&2; exit 127; }; " +
+                "if head -n1 \"\$bin\" | grep -q node; then exec node \"\$bin\" \"\$@\"; else exec \"\$bin\" \"\$@\"; fi"
+            else "exec $cmd \"\$@\""
+            val script = "${env}mkdir -p ~/.telescript-sandbox && cd ~/.telescript-sandbox && ${prepare}$run"
             val resultIntent = Intent(app, LlmResultReceiver::class.java).putExtra(LlmResultReceiver.EXTRA_ID, id)
             var flags = PendingIntent.FLAG_UPDATE_CURRENT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags = flags or PendingIntent.FLAG_MUTABLE
@@ -144,7 +154,7 @@ object LlmBridge {
             val intent = Intent("com.termux.RUN_COMMAND")
                 .setClassName(TERMUX, "com.termux.app.RunCommandService")
                 .putExtra("com.termux.RUN_COMMAND_PATH", BASH)
-                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", (listOf("-c", script, name) + args).toTypedArray())
+                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", (listOf("-lc", script, name) + args).toTypedArray())
                 .putExtra("com.termux.RUN_COMMAND_STDIN", stdin)
                 .putExtra("com.termux.RUN_COMMAND_WORKDIR", TERMUX_HOME)
                 .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
@@ -165,6 +175,20 @@ object LlmBridge {
             return Result(125, "", "Не удалось запустить команду в Termux: ${e.message}")
         } finally {
             pending.remove(id)
+        }
+    }
+
+    /** Human-readable cause of a failed run, for the "Проверить" button. */
+    fun explain(r: Result): String {
+        val e = r.stderr
+        return when {
+            r.exitCode == 0 && r.stdout.isNotBlank() -> ""
+            "bad interpreter" in e -> "Не найден интерпретатор скрипта (bad interpreter): в Termux выполните pkg install nodejs libc++ и переустановите CLI."
+            "не установлен" in e || "not found" in e || r.exitCode == 127 -> "Команда не найдена в Termux: CLI не установлен (см. инструкцию)."
+            "login" in e.lowercase() || "auth" in e.lowercase() -> "Нужен вход: запустите CLI в Termux и войдите в аккаунт."
+            r.exitCode == 126 || r.exitCode == 125 || r.exitCode == 124 -> e.lineSequence().firstOrNull().orEmpty()
+            r.exitCode == 0 -> "Пустой ответ."
+            else -> "Команда завершилась с кодом ${r.exitCode}."
         }
     }
 

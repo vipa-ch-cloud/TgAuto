@@ -79,6 +79,8 @@ termux-reload-settings
 
 ## Если не работает
 - `CANNOT LINK EXECUTABLE "node"`: выполни `pkg upgrade -y`, затем `pkg install -y libc++ nodejs`.
+- «Проверить» пишет `bad interpreter: No such file or directory`: выполни в Termux `pkg install -y libc++ nodejs` и перезапусти Termux. TeleScript уже запускает CLI через `node`, но без node ничего не заработает.
+- «Проверить» пишет «не установлен» или `not found`: нужного CLI нет в Termux, поставь его по шагу 2 (Claude) или 3б (Gemini).
 - `claude` выдаёт «Bad system call» или «native binary not installed»: встала не та версия, повтори установку с `@2.1.112`.
 - «Проверить» молчит: открой Termux, чтобы он висел в фоне, и попробуй ещё раз.
 - `gemini` падает при установке с `android_ndk_path` или `tree-sitter`: ставь с `--ignore-scripts`, см. шаг 3б.
