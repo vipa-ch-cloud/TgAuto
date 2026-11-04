@@ -51,9 +51,11 @@ fun SettingsTab() {
     ) {
         TabHeader(stringResource(R.string.settings_title))
 
+        FlavorTopSection()
+
         LlmCard()
 
-        if (BuildConfig.FLAVOR == "nightly") ProvidersCard()
+        FlavorLlmSections()
 
         ConfigEditorCard()
 
@@ -196,7 +198,8 @@ private fun validateJson(text: String): String? {
 @Composable
 private fun LlmCard() {
     val context = LocalContext.current
-    val order by AppSettings.llmOrder.flow.collectAsStateWithLifecycle()
+    val orderPref by AppSettings.llmOrder.flow.collectAsStateWithLifecycle()
+    val order = FlavorHooks.cliOrderState(orderPref)
     val key by AppSettings.anthropicKey.flow.collectAsStateWithLifecycle()
     val model by AppSettings.model.flow.collectAsStateWithLifecycle()
     val claudeCmd by AppSettings.termuxCommand.flow.collectAsStateWithLifecycle()
@@ -263,8 +266,8 @@ private fun LlmCard() {
     AppSectionCard {
         SectionHeader(Icons.Default.AutoAwesome, "LLM")
         Hint(stringResource(R.string.settings_llm_hint))
-        Text(stringResource(R.string.settings_order), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        listOf(
+        if (!FlavorHooks.managesBackend) Text(stringResource(R.string.settings_order), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!FlavorHooks.managesBackend) listOf(
             "both" to stringResource(R.string.settings_order_both),
             "claude" to stringResource(R.string.settings_order_claude),
             "gemini" to stringResource(R.string.settings_order_gemini),

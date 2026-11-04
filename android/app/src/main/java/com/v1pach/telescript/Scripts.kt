@@ -411,13 +411,14 @@ object ScriptManager {
         }
         env.put("TELESCRIPT_SCRIPT_ID", script.id)
         // LLM: Claude / Gemini CLI in Termux (shims on PATH); the API key is the last fallback.
-        val order = AppSettings.llmOrder.value
+        val order = FlavorHooks.cliOrder(AppSettings.llmOrder.value)
         LlmBridge.setup(order)
         val basePath = System.getenv("PATH") ?: "/system/bin"
         env.put("PATH", if (order == "api") basePath else "${Paths.llmBin.absolutePath}:$basePath")
         env.put("TELESCRIPT_LLM_ORDER", order)
-        env.put("TELESCRIPT_LLM_PROVIDERS_FILE", Providers.path)
-        env.put("ANTHROPIC_API_KEY", AppSettings.anthropicKey.value.trim())
+        env.put("TELESCRIPT_LLM_PROVIDERS_FILE", FlavorHooks.providersFile())
+        env.put("ANTHROPIC_API_KEY", FlavorHooks.apiKey(AppSettings.anthropicKey.value.trim()))
+        FlavorHooks.putEnv(env)
         if (model.isNotEmpty()) env.put("ANTHROPIC_MODEL", model)
         env.put("HOME", Paths.root.absolutePath)
         env.put("TELESCRIPT_SITE_PACKAGES", Paths.sitePackages.absolutePath)

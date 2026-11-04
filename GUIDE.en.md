@@ -111,6 +111,15 @@ If you do not need Claude and Gemini or they are unavailable, scripts can use an
 - Privacy: keys are stored only in the app's private folder on the phone (a file with 600 permissions). They are not written to logs, not shown after saving and do not end up in the scripts folder. The script receives only the file path in `TELESCRIPT_LLM_PROVIDERS_FILE`; the file is read by the script you started.
 - Codex (ChatGPT account) is not supported yet: the official login in Termux fails for many (github.com/openai/codex/issues/6632), there is no proven method.
 
+## 14. Console and AI backend selection (TgAuto Nightly build only)
+The stable build does not have these sections.
+- "Settings" -> "CLI" (top) -> "Open console": a full-screen terminal. Commands go to Termux over the same bridge the scripts use, so Termux and the RUN_COMMAND permission are required (section 4).
+- Quick buttons: "check claude", "check gemini", "node versions". There is history (up and down arrows), Ctrl+C and copying: tapping a line selects it, the copy button takes the selection or everything.
+- ANSI (SGR) colors and newlines are supported. Limitations: output appears only after the command finishes (background RUN_COMMAND does not stream), and interactive programs (vim, password prompts) do not work. Ctrl+C stops waiting and signals the process.
+- "Settings" -> "AI backend": who answers for scripts. "Auto" (Claude, then Gemini, then providers, then API; each item has a switch and order arrows), "Claude only", "Gemini only" or one specific provider.
+- What the choice really does: unselected claude and gemini are hidden from scripts, scripts get a providers file with only the selected ones, and the Anthropic API key is passed only if API is selected. The order inside "Auto" is passed in `TELESCRIPT_LLM_BACKEND` and applies where a script honours it. A script's own `backend` config still takes priority. The `TELESCRIPT_LLM_PROVIDERS_FILE` contract is unchanged.
+- After upgrading from an older version the choice is taken from the old order setting until you change something.
+
 ## Troubleshooting
 - `CANNOT LINK EXECUTABLE "node"`: run `pkg upgrade -y`, then `pkg install -y libc++ nodejs`.
 - "Check" reports `bad interpreter: No such file or directory`: in Termux run `pkg install -y libc++ nodejs` and restart Termux. TgAuto already starts the CLI through `node`, but nothing works without node.
