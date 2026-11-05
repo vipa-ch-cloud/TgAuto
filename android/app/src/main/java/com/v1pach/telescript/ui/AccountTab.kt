@@ -58,7 +58,14 @@ object AccountState {
 
     private fun set(transform: Ui.() -> Ui) { _ui.value = _ui.value.transform() }
 
-    private fun creds(): Array<Any?> = arrayOf(
+    private fun creds(): Array<Any?> {
+        if (AppSettings.proxyType.value == "mtproxy" && AppSettings.proxyHost.value.isNotBlank()) {
+            AppSettings.proxySecretError(AppSettings.proxySecret.value)?.let { throw IllegalArgumentException(Str.get(it)) }
+        }
+        return credsArray()
+    }
+
+    private fun credsArray(): Array<Any?> = arrayOf(
         Paths.sessionFile.absolutePath,
         AppSettings.apiId.value.trim().toInt(),
         AppSettings.apiHash.value.trim(),
@@ -223,7 +230,10 @@ fun AccountTab() {
                         Modifier.weight(1f), keyboardType = KeyboardType.Number)
                 }
                 if (proxyType == "mtproxy") {
-                    AppTextField(proxySecret, { AppSettings.proxySecret.set(it.trim()) }, "Secret", secret = true)
+                    AppTextField(proxySecret, { AppSettings.proxySecret.set(AppSettings.normalizeProxySecret(it)) }, "Secret", secret = true)
+                    AppSettings.proxySecretError(proxySecret).takeIf { proxySecret.isNotEmpty() }?.let {
+                        Hint(stringResource(it), MaterialTheme.colorScheme.error)
+                    }
                     val fakeTls = proxySecret.trim().lowercase().startsWith("ee")
                     Hint(
                         if (fakeTls) stringResource(R.string.account_fake_tls_bad)

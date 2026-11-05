@@ -8,6 +8,8 @@ object FlavorHooks {
     const val managesBackend = false
     fun cliOrder(pref: String): String = pref
     @Composable fun cliOrderState(pref: String): String = pref
+    fun codexOn(): Boolean = false
+    @Composable fun codexState(pref: String): Boolean = false
     fun providersFile(): String = Providers.path
     fun apiKey(raw: String): String = raw
     fun putEnv(env: JSONObject) {}

@@ -21,6 +21,7 @@
     <string name="llm_bad_interp">Script interpreter not found (bad interpreter): in Termux run pkg install nodejs libc++ and reinstall the CLI.</string>
     <string name="llm_not_found">Command not found in Termux: the CLI is not installed (see the guide).</string>
     <string name="llm_need_login">Login required: run the CLI in Termux and sign in.</string>
+    <string name="llm_need_login_codex">Codex is not signed in: in Termux run codex login (codex login --device-auth if there is no browser), then check again.</string>
     <string name="llm_empty">Empty reply.</string>
     <string name="llm_exit_code">The command exited with code %1$s.</string>
     <string name="llm_empty_result">Termux returned an empty result</string>

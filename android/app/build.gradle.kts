@@ -12,8 +12,8 @@ android {
         applicationId = "com.v1pach.telescript"
         minSdk = 26
         targetSdk = 37
-        versionCode = 18
-        versionName = "1.8"
+        versionCode = 19
+        versionName = "1.8.1"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }

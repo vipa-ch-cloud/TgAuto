@@ -119,6 +119,10 @@ The stable build does not have these sections.
 - "Settings" -> "AI backend": who answers for scripts. "Auto" (Claude, then Gemini, then providers, then API; each item has a switch and order arrows), "Claude only", "Gemini only" or one specific provider.
 - What the choice really does: unselected claude and gemini are hidden from scripts, scripts get a providers file with only the selected ones, and the Anthropic API key is passed only if API is selected. The order inside "Auto" is passed in `TELESCRIPT_LLM_BACKEND` and applies where a script honours it. A script's own `backend` config still takes priority. The `TELESCRIPT_LLM_PROVIDERS_FILE` contract is unchanged.
 - After upgrading from an older version the choice is taken from the old order setting until you change something.
+- Console effect: the "CRT effect" button in the console title bar (on by default, remembered) adds a rolling refresh band, scanlines, a vignette and a soft glow.
+- Codex (Nightly): the "Codex" switch in "AI backend" adds it to Auto, or pick "Only Codex". It runs through Termux like Claude; log in with `codex login` there. Not verified on a real device.
+- Proxy secret: for MTProxy, hex (optionally dd/ee) or base64 is accepted; spaces are stripped and a wrong secret shows an error instead of a Python message.
+- Scripts (automod, auto-responder): Telegram reconnect spam in the log collapses into "no connection / restored" lines.
 
 ## Troubleshooting
 - `CANNOT LINK EXECUTABLE "node"`: run `pkg upgrade -y`, then `pkg install -y libc++ nodejs`.

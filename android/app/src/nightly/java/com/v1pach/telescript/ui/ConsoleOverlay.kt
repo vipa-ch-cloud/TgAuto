@@ -1,6 +1,12 @@
 package com.v1pach.telescript.ui
 
 import android.content.ClipData
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -19,7 +25,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalClipboard
@@ -76,10 +99,63 @@ private fun termColors(): TermColors {
     )
 }
 
+/**
+ * CRT look drawn above the console: a refresh band rolling top to bottom, scanlines, a vignette.
+ * Scanlines and vignette are built once per size (a 1xN tile shader and a radial brush); each frame
+ * only the band is translated, and the animated phase is read in the draw phase, so nothing
+ * recomposes or allocates per frame.
+ */
+@Composable
+private fun Modifier.crtOverlay(on: Boolean, tint: Color): Modifier {
+    if (!on) return this
+    val phase = rememberInfiniteTransition(label = "crt").animateFloat(
+        0f, 1f, infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart), label = "band")
+    return drawWithCache {
+        val w = size.width
+        val h = size.height
+        val period = (3.dp.toPx()).toInt().coerceAtLeast(2)
+        val tile = ImageBitmap(1, period)
+        Canvas(tile).drawRect(0f, 0f, 1f, 1f, Paint().apply { color = Color.Black.copy(alpha = 0.22f) })
+        val scan = ShaderBrush(ImageShader(tile, TileMode.Repeated, TileMode.Repeated))
+        val vignette = Brush.radialGradient(
+            0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.5f),
+            center = Offset(w / 2f, h / 2f), radius = kotlin.math.hypot(w, h) / 2f)
+        val bandH = h * 0.16f
+        val band = Brush.verticalGradient(
+            listOf(Color.Transparent, tint.copy(alpha = 0.07f), tint.copy(alpha = 0.16f), Color.Transparent), 0f, bandH)
+        val bandSize = Size(w, bandH)
+        onDrawWithContent {
+            drawContent()
+            drawRect(scan)
+            translate(top = -bandH + (h + bandH) * phase.value) { drawRect(band, size = bandSize) }
+            drawRect(vignette)
+        }
+    }
+}
+
+/** Soft glow hugging the edge of a button or hitbox (inside its bounds, so parents do not clip it). */
+private fun Modifier.crtGlow(on: Boolean, color: Color, corner: Dp = 8.dp): Modifier =
+    if (!on) this else drawWithCache {
+        val c = CornerRadius(corner.toPx())
+        val wide = Stroke(5.dp.toPx())
+        val mid = Stroke(3.dp.toPx())
+        val thin = Stroke(1.dp.toPx())
+        val a = color.copy(alpha = 0.06f)
+        val b = color.copy(alpha = 0.12f)
+        val d = color.copy(alpha = 0.28f)
+        onDrawBehind {
+            drawRoundRect(a, cornerRadius = c, style = wide)
+            drawRoundRect(b, cornerRadius = c, style = mid)
+            drawRoundRect(d, cornerRadius = c, style = thin)
+        }
+    }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConsoleOverlay(onClose: () -> Unit) {
     val t = termColors()
+    val crt by ConsoleSession.crt.flow.collectAsStateWithLifecycle()
+    val glow = if (crt) Shadow(t.fg.copy(alpha = 0.35f), Offset.Zero, 6f) else null
     val lines = ConsoleSession.lines
     val running = ConsoleSession.running
     val listState = rememberLazyListState()
@@ -112,7 +188,7 @@ fun ConsoleOverlay(onClose: () -> Unit) {
 
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Surface(Modifier.fillMaxSize(), color = t.bg) {
-            Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
+            Column(Modifier.fillMaxSize().crtOverlay(crt, t.prompt).systemBarsPadding().imePadding()) {
                 // title bar
                 Row(Modifier.fillMaxWidth().background(t.bar).padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically) {
@@ -120,6 +196,9 @@ fun ConsoleOverlay(onClose: () -> Unit) {
                     Spacer(Modifier.width(10.dp))
                     Text(stringResource(R.string.console_title), color = t.fg, fontFamily = MONO, fontWeight = FontWeight.SemiBold,
                         style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { ConsoleSession.crt.set(!crt) }, modifier = Modifier.crtGlow(crt, t.prompt, 20.dp)) {
+                        Icon(Icons.Default.Tv, stringResource(R.string.console_crt), tint = if (crt) t.prompt else t.dim)
+                    }
                     IconButton(onClick = { copy() }) { Icon(Icons.Default.ContentCopy, stringResource(R.string.console_copy), tint = t.fg) }
                     IconButton(onClick = { ConsoleSession.clear(); selected = emptySet() }) {
                         Icon(Icons.Default.DeleteSweep, stringResource(R.string.console_clear), tint = t.fg)
@@ -152,8 +231,10 @@ fun ConsoleOverlay(onClose: () -> Unit) {
                         }
                         Text(
                             text, fontFamily = MONO, fontSize = 13.sp, lineHeight = 18.sp,
+                            style = if (glow != null) TextStyle(shadow = glow) else TextStyle.Default,
                             modifier = Modifier.fillMaxWidth()
                                 .background(if (sel) t.selection else Color.Transparent)
+                                .crtGlow(crt && sel, t.prompt, 2.dp)
                                 .clickable { selected = if (sel) selected - line.id else selected + line.id }
                                 .padding(horizontal = 12.dp, vertical = 1.dp)
                         )
@@ -165,9 +246,10 @@ fun ConsoleOverlay(onClose: () -> Unit) {
                     listOf(
                         stringResource(R.string.console_q_claude) to "claude --version",
                         stringResource(R.string.console_q_gemini) to "gemini --version",
+                        stringResource(R.string.console_q_codex) to "codex --version",
                         stringResource(R.string.console_q_node) to "node -v; npm -v",
                     ).forEach { (label, cmd) ->
-                        AssistChip(onClick = { send(cmd) }, enabled = !running, label = { Text(label, fontFamily = MONO) })
+                        AssistChip(onClick = { send(cmd) }, enabled = !running, modifier = Modifier.crtGlow(crt, t.prompt, 8.dp), label = { Text(label, fontFamily = MONO) })
                     }
                 }
                 // keys: Ctrl+C and history
@@ -194,7 +276,7 @@ fun ConsoleOverlay(onClose: () -> Unit) {
                     }
                 }
                 // prompt line with a cursor
-                Row(Modifier.fillMaxWidth().background(t.bar).padding(horizontal = 12.dp, vertical = 8.dp),
+                Row(Modifier.fillMaxWidth().background(t.bar).crtGlow(crt, t.prompt, 0.dp).padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Text("$ ", color = t.prompt, fontFamily = MONO, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     BasicTextField(
@@ -206,7 +288,7 @@ fun ConsoleOverlay(onClose: () -> Unit) {
                         keyboardActions = KeyboardActions(onSend = { send(input.text) }),
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = { send(input.text) }, enabled = !running && input.text.isNotBlank()) {
+                    IconButton(onClick = { send(input.text) }, enabled = !running && input.text.isNotBlank(), modifier = Modifier.crtGlow(crt && !running, t.prompt, 20.dp)) {
                         Icon(Icons.Default.Send, stringResource(R.string.console_run), tint = if (running) t.dim else t.prompt)
                     }
                 }

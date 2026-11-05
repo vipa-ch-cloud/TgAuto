@@ -42,6 +42,24 @@ def _err(message, status="error"):
     return json.dumps({"status": status, "message": str(message)}, ensure_ascii=False)
 
 
+def normalize_secret(raw):
+    """Strip whitespace and validate an MTProxy secret (hex, even length / urlsafe base64)."""
+    import re
+    s = re.sub(r"\s+", "", str(raw or ""))
+    if not s:
+        raise ValueError(_t("Введите secret MTProxy", "Enter the MTProxy secret"))
+    if re.fullmatch(r"[0-9a-fA-F]+", s):
+        if len(s) % 2:
+            raise ValueError(_t("Secret должен быть hex с чётным числом символов (или urlsafe base64)",
+                                "Secret must be hex with an even number of characters (or urlsafe base64)"))
+        return s
+    body = s.rstrip("=")
+    if not re.fullmatch(r"[A-Za-z0-9_\-+/]+", body) or len(s) - len(body) > 2 or len(body) % 4 == 1:
+        raise ValueError(_t("Неверный secret: нужен hex с чётным числом символов или urlsafe base64",
+                            "Invalid secret: use hex with an even number of characters or urlsafe base64"))
+    return s
+
+
 def _proxy_kwargs(proxy):
     if not proxy or proxy.get("type") in (None, "", "none"):
         return {}
@@ -49,7 +67,7 @@ def _proxy_kwargs(proxy):
         return {"proxy": ("socks5", proxy["host"], int(proxy["port"]))}
     from telethon.network.connection import ConnectionTcpMTProxyRandomizedIntermediate
     return {"connection": ConnectionTcpMTProxyRandomizedIntermediate,
-            "proxy": (proxy["host"], int(proxy["port"]), proxy.get("secret", ""))}
+            "proxy": (proxy["host"], int(proxy["port"]), normalize_secret(proxy.get("secret", "")))}
 
 
 async def _client(session, api_id, api_hash, proxy_json):

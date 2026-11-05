@@ -21,6 +21,7 @@
     <string name="llm_bad_interp">Не найден интерпретатор скрипта (bad interpreter): в Termux выполните pkg install nodejs libc++ и переустановите CLI.</string>
     <string name="llm_not_found">Команда не найдена в Termux: CLI не установлен (см. инструкцию).</string>
     <string name="llm_need_login">Нужен вход: запустите CLI в Termux и войдите в аккаунт.</string>
+    <string name="llm_need_login_codex">Codex не авторизован: в Termux выполните codex login (codex login --device-auth, если нет браузера) и проверьте снова.</string>
     <string name="llm_empty">Пустой ответ.</string>
     <string name="llm_exit_code">Команда завершилась с кодом %1$s.</string>
     <string name="llm_empty_result">Termux вернул пустой результат</string>

@@ -55,21 +55,22 @@ object LlmBridge {
      * Links the shim into Paths.llmBin (as `claude`) and starts the spool poller.
      * Removes the link in API-key mode so automod's "auto" backend picks the API.
      */
-    fun setup(order: String) {
+    fun setup(order: String, codex: Boolean = false) {
         Paths.llmBin.mkdirs()
         Paths.llmSpool.mkdirs()
         val target = File(app.applicationInfo.nativeLibraryDir, "libclaude.so").absolutePath
         // Only the CLIs the user allowed get a link, so scripts fall back claude -> gemini -> API key.
-        for (name in listOf("claude", "gemini")) {
+        for (name in listOf("claude", "gemini", "codex")) {
             val link = File(Paths.llmBin, name)
-            if (!(order == "both" || order == name)) { link.delete(); continue }
+            val allowed = if (name == "codex") codex else (order == "both" || order == name)
+            if (!allowed) { link.delete(); continue }
             val current = runCatching { android.system.Os.readlink(link.absolutePath) }.getOrNull()
             if (current != target) {
                 link.delete()
                 android.system.Os.symlink(target, link.absolutePath)
             }
         }
-        if (order != "api") startPoller()
+        if (order != "api" || codex) startPoller()
     }
 
     @Synchronized
@@ -121,8 +122,12 @@ object LlmBridge {
 
     /** Runs `claude`/`gemini <args>` in Termux with [stdin] as its standard input. Blocking. */
     fun run(name: String, args: List<String>, stdin: String, timeoutS: Long = TIMEOUT_S): Result {
-        require(name == "claude" || name == "gemini") { "unknown command $name" }
-        val pref = if (name == "gemini") AppSettings.geminiCommand else AppSettings.termuxCommand
+        require(name == "claude" || name == "gemini" || name == "codex") { "unknown command $name" }
+        val pref = when (name) {
+            "gemini" -> AppSettings.geminiCommand
+            "codex" -> AppSettings.codexCommand
+            else -> AppSettings.termuxCommand
+        }
         val cmd = pref.value.trim().ifEmpty { name }
         // An empty working directory, as automod's own sandbox; $CMD is split on spaces
         // so a wrapper such as `proot-distro login ubuntu -- claude` works too.
@@ -196,12 +201,13 @@ object LlmBridge {
     }
 
     /** Human-readable cause of a failed run, for the "Проверить" button. */
-    fun explain(r: Result): String {
+    fun explain(r: Result, name: String = ""): String {
         val e = r.stderr
         return when {
             r.exitCode == 0 && r.stdout.isNotBlank() -> ""
             "bad interpreter" in e -> Str.get(R.string.llm_bad_interp)
             "не установлен" in e || "not found" in e || r.exitCode == 127 -> Str.get(R.string.llm_not_found)
+            name == "codex" && ("login" in e.lowercase() || "auth" in e.lowercase() || "401" in e) -> Str.get(R.string.llm_need_login_codex)
             "login" in e.lowercase() || "auth" in e.lowercase() -> Str.get(R.string.llm_need_login)
             r.exitCode == 126 || r.exitCode == 125 || r.exitCode == 124 -> e.lineSequence().firstOrNull().orEmpty()
             r.exitCode == 0 -> Str.get(R.string.llm_empty)

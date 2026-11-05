@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.v1pach.telescript.AppSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,11 +21,14 @@ class ConsoleLine(val id: Long, val kind: LineKind, val spans: List<AnsiSpan>)
  */
 object ConsoleSession {
     private const val MAX_LINES = 3000
-    /** Shell functions so `claude` / `gemini` (npm scripts with a node shebang) work like in the shims. */
+    /** Shell functions so `claude` / `gemini` / `codex` (npm scripts with a node shebang) work like in the shims. */
     private const val PRELUDE =
         "__tg() { n=\$1; shift; b=\$(type -P \"\$n\") || { echo \"\$n: command not found\" >&2; return 127; }; " +
         "if head -n1 \"\$b\" | grep -q node; then node \"\$b\" \"\$@\"; else \"\$b\" \"\$@\"; fi; }; " +
-        "claude() { __tg claude \"\$@\"; }; gemini() { __tg gemini \"\$@\"; }; cd ~; "
+        "claude() { __tg claude \"\$@\"; }; gemini() { __tg gemini \"\$@\"; }; codex() { __tg codex \"\$@\"; }; cd ~; "
+
+    /** CRT effect on the console overlay (default on). */
+    val crt = AppSettings.Pref("console_crt", true)
 
     val lines = mutableStateListOf<ConsoleLine>()
     var running by mutableStateOf(false)

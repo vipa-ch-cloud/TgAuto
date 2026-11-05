@@ -58,10 +58,12 @@ private fun AiBackendCard() {
     val off by AiBackend.off.flow.collectAsStateWithLifecycle()
     val legacy by AppSettings.llmOrder.flow.collectAsStateWithLifecycle()
     val providers by Providers.list.collectAsStateWithLifecycle()
+    val codexOn by AiBackend.codexOn.flow.collectAsStateWithLifecycle()
     val ids = providers.map { it.id }
-    val plan = AiBackend.plan(legacy, mode, chain, off, provider, ids)
+    val plan = AiBackend.plan(legacy, mode, chain, off, provider, ids, codexOn)
     val kindNames = mapOf(
         "claude" to stringResource(R.string.ai_k_claude), "gemini" to stringResource(R.string.ai_k_gemini),
+        "codex" to stringResource(R.string.ai_k_codex),
         "providers" to stringResource(R.string.ai_k_providers), "api" to stringResource(R.string.ai_k_api),
     )
     fun name(k: String) = if (k.startsWith("provider:")) providers.firstOrNull { it.id == k.removePrefix("provider:") }
@@ -82,6 +84,7 @@ private fun AiBackendCard() {
                 if (provider !in ids) providers.firstOrNull()?.let { AiBackend.provider.set(it.id) }
             }
         }
+        ChoiceButton(stringResource(R.string.ai_m_codex), m == "codex", Modifier.fillMaxWidth()) { AiBackend.select("codex") }
         if (m == "provider") {
             providers.forEach { p ->
                 ChoiceButton(p.title.ifBlank { p.baseUrl }, p.id == provider, Modifier.fillMaxWidth()) { AiBackend.provider.set(p.id) }
@@ -89,7 +92,7 @@ private fun AiBackendCard() {
         }
         if (m == "auto") {
             Text(stringResource(R.string.ai_order), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            val disabled = off.split(',').toSet()
+            val disabled = off.split(',').toSet().let { if (codexOn) it else it + "codex" }
             val order = AiBackend.normalizedChain(chain)
             order.forEachIndexed { i, k ->
                 Row(verticalAlignment = Alignment.CenterVertically) {

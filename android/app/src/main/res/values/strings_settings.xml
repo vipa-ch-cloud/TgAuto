@@ -59,6 +59,9 @@
     <string name="settings_claude_hint">For proot Ubuntu: proot-distro login ubuntu -- claude</string>
     <string name="settings_gemini_acc">Gemini account (Termux)</string>
     <string name="settings_gemini_hint">Usually gemini. The \"no tools\" settings are written to ~/.telescript-sandbox/.gemini</string>
+    <string name="settings_codex_acc">Codex account (Termux)</string>
+    <string name="settings_codex_hint">Usually codex. Runs as codex exec --sandbox read-only, prompt on stdin; sign in once with codex login in Termux.</string>
+    <string name="settings_step_codex">Codex (optional, Nightly): install and sign in (ChatGPT account):</string>
     <string name="settings_hide_steps">Hide instructions</string>
     <string name="settings_show_steps">How to set up Termux</string>
     <string name="settings_api_key">Anthropic API key (last resort)</string>

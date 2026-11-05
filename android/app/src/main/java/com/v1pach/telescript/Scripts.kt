@@ -410,9 +410,10 @@ object ScriptManager {
             env.put("${prefix}_$k", v)
         }
         env.put("TELESCRIPT_SCRIPT_ID", script.id)
-        // LLM: Claude / Gemini CLI in Termux (shims on PATH); the API key is the last fallback.
+        // LLM: Claude / Gemini / Codex CLI in Termux (shims on PATH); the API key is the last fallback.
         val order = FlavorHooks.cliOrder(AppSettings.llmOrder.value)
-        LlmBridge.setup(order)
+        val codex = FlavorHooks.codexOn()
+        LlmBridge.setup(order, codex)
         val basePath = System.getenv("PATH") ?: "/system/bin"
         env.put("PATH", if (order == "api") basePath else "${Paths.llmBin.absolutePath}:$basePath")
         env.put("TELESCRIPT_LLM_ORDER", order)
