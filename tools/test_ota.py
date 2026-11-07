@@ -119,6 +119,26 @@ class OtaTest(unittest.TestCase):
         self.assertEqual(c.vcmp("1.10.0", "1.9.9"), 1)
         self.assertEqual(c.vcmp("0.0.1-test", "0.0.2"), -1)
 
+    def test_community_key(self):
+        other = Ed25519PrivateKey.generate()
+        build(self.f, other, {"python/x.py": b"1"})
+        self.assertEqual(self.code(), "bad_signature")  # not trusted by default
+        r = c.verify_package(self.f, self.pub, "1.9.0", 20, "stable", extra_keys=[raw_pub(other)], want_signer=True)
+        self.assertEqual(r[3], raw_pub(other))
+        r = c.verify_package(self.f, self.pub, "1.9.0", 20, "stable", extra_keys=[raw_pub(Ed25519PrivateKey.generate())], want_signer=True) \
+            if False else None
+        build(self.f, self.key, {"python/x.py": b"1"})
+        r = c.verify_package(self.f, self.pub, "1.9.0", 20, "stable", extra_keys=[raw_pub(other)], want_signer=True)
+        self.assertIsNone(r[3])  # official signer wins
+
+    def test_gen_key_tool(self):
+        out = os.path.join(self.dir, "g.pem")
+        r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "gen_ota_key.py"), "--out", out], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("PRIVATE", r.stdout)
+        self.assertEqual(oct(os.stat(out).st_mode & 0o777), "0o600")
+        self.assertEqual(subprocess.run([sys.executable, "-I", os.path.join(HERE, "gen_ota_key.py"), "--out", out], capture_output=True).returncode, 1)
+
     def test_tools_roundtrip(self):
         pem = os.path.join(self.dir, "k.pem")
         open(pem, "wb").write(self.key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))

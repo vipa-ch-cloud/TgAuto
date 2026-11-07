@@ -1,4 +1,4 @@
-import com.v1pach.telescript.ota.OtaCore
+import com.v1pach.telescript.ota.*
 import com.v1pach.telescript.ota.OtaException
 import com.v1pach.telescript.store.*
 import org.json.JSONArray
@@ -61,6 +61,42 @@ fun main(args: Array<String>) {
     val rt = StoreMeta.parseSources(StoreMeta.serializeSources(listOf(off, com, StoreMeta.newSource("k", "https://k/i.json", "AB".repeat(32)))))
     check("sources roundtrip", rt.size == 2 && rt[1].keyHex == "ab".repeat(32) && rt.none { it.official })
     check("sources garbage", StoreMeta.parseSources("not json").isEmpty())
+    // --- version comparison ---
+    check("vcmp newer", OtaCore.vcmp("1.9.2", "1.9.1") > 0 && OtaCore.vcmp("1.10.0", "1.9.9") > 0)
+    check("vcmp equal/older", OtaCore.vcmp("1.9.2", "1.9.2") == 0 && OtaCore.vcmp("1.9.1", "1.9.2") < 0)
+    // --- community keys ---
+    val comm = OtaCore.hex(File("$d/comm.hex").readText().trim())
+    check("community rejected without trust", code { OtaCore.verify(File("$d/community.tgadyn"), pub, "1.9.0", 20, "stable") } == "bad_signature")
+    val cp = OtaCore.verify(File("$d/community.tgadyn"), pub, "1.9.0", 20, "stable", extraKeys = listOf(comm))
+    check("community accepted when trusted, not official", cp.communityKey != null && !cp.official && cp.signed)
+    check("official stays official with extra keys", OtaCore.verify(File("$d/ok.tgadyn"), pub, "1.9.0", 20, "stable", extraKeys = listOf(comm)).official)
+    check("other community key still rejected", code { OtaCore.verify(File("$d/community.tgadyn"), pub, "1.9.0", 20, "stable", extraKeys = listOf(ByteArray(32) { 7 })) } == "bad_signature")
+    val hexComm = comm.joinToString("") { "%02x".format(it) }
+    val b64 = java.util.Base64.getEncoder().encodeToString(comm)
+    check("parseKey hex/b64/prefix", TrustedKeys.parseKey(hexComm)!!.contentEquals(comm) && TrustedKeys.parseKey(b64)!!.contentEquals(comm) &&
+        TrustedKeys.parseKey("ed25519:" + hexComm.uppercase())!!.contentEquals(comm) && TrustedKeys.parseKey("zz") == null && TrustedKeys.parseKey("abcd") == null)
+    fun addCode(l: List<TrustedKey>, n: String, k: String) = try { TrustedKeys.add(l, n, k, pub); "ok" } catch (e: IllegalArgumentException) { e.message }
+    check("add official refused", addCode(emptyList(), "x", pub.joinToString("") { "%02x".format(it) }) == "official")
+    check("add bad/name/dup", addCode(emptyList(), "x", "nope") == "key" && addCode(emptyList(), " ", hexComm) == "name" &&
+        addCode(TrustedKeys.add(emptyList(), "a", hexComm, pub), "b", b64) == "dup")
+    val lst = TrustedKeys.add(emptyList(), "Alice", hexComm, pub)
+    check("serialize roundtrip + fingerprint", TrustedKeys.parse(TrustedKeys.serialize(lst)).let { it.size == 1 && it[0].name == "Alice" && it[0].fingerprint == OtaCore.sha256(comm) } &&
+        TrustedKeys.parse("garbage").isEmpty() && TrustedKeys.remove(lst, hexComm).isEmpty())
+    // --- APK update rules ---
+    check("apk asset names", ApkCore.versionOf("TgAuto-1.9.2.apk", "stable") == "1.9.2" && ApkCore.versionOf("TgAuto-nightly-1.9.2.apk", "stable") == null &&
+        ApkCore.versionOf("TgAuto-nightly-1.9.2.apk", "nightly") == "1.9.2" && ApkCore.versionOf("TgAuto-1.9.2.apk", "nightly") == null)
+    val rel = JSONObject("""{"tag_name":"v1.9.2","assets":[{"name":"TgAuto-1.9.2.apk","browser_download_url":"https://x/a.apk","size":5,"digest":"sha256:${"a".repeat(64)}"},
+        {"name":"TgAuto-nightly-1.9.2.apk","browser_download_url":"https://x/n.apk","size":6},{"name":"TgAuto-1.9.3.apk","browser_download_url":"http://x/insecure.apk","size":6}]}""")
+    check("pick stable newer + digest", ApkCore.pick(rel, "stable", "1.9.1")?.let { it.version == "1.9.2" && it.sha256 == "a".repeat(64) } == true)
+    check("pick nightly", ApkCore.pick(rel, "nightly", "1.9.1")?.name == "TgAuto-nightly-1.9.2.apk")
+    check("pick none when current", ApkCore.pick(rel, "stable", "1.9.2") == null)
+    check("checksum parse", ApkCore.parseChecksum("${"B".repeat(64)}  TgAuto-1.9.2.apk\n", "TgAuto-1.9.2.apk") == "b".repeat(64))
+    // --- signing certificate match ---
+    check("certs equal", ApkCore.certsMatch(setOf("AA:BB"), setOf("aabb")))
+    check("certs differ/empty/subset", !ApkCore.certsMatch(setOf("aabb"), setOf("ccdd")) && !ApkCore.certsMatch(emptySet(), emptySet()) && !ApkCore.certsMatch(setOf("aa", "bb"), setOf("aa")))
+    fun idc(pk: String?, cn: Long, ci: Set<String>, cnw: Set<String>) = code { ApkCore.checkIdentity("a.b", pk, 21, cn, ci, cnw) }
+    check("identity ok", idc("a.b", 22, setOf("aa"), setOf("aa")) == "ok")
+    check("identity wrong package/downgrade/cert", idc("a.b.nightly", 22, setOf("aa"), setOf("aa")) == "apk_package" && idc("a.b", 21, setOf("aa"), setOf("aa")) == "apk_not_newer" && idc("a.b", 22, setOf("aa"), setOf("bb")) == "apk_cert")
     args.getOrNull(1)?.let { File(it) }?.takeIf { it.exists() }?.let { f ->
         val e = StoreMeta.parseEntries(JSONObject(f.readText()).getJSONArray("scripts"), off)
         check("real catalog", e.isNotEmpty() && e.all { it.meta.color != null && it.meta.icon in StoreMeta.ICONS && it.meta.title(true, "").isNotEmpty() })

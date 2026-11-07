@@ -171,10 +171,12 @@ def validate_manifest(m):
             raise OtaError("bad_manifest", "tags/permissions")
 
 
-def verify_package(path, public_key_raw, base_name, base_code, flavor, kind=None):
+def verify_package(path, public_key_raw, base_name, base_code, flavor, kind=None, extra_keys=(), want_signer=False):
     """Full check of a .tgadyn / .tgascript file. Returns (manifest, {path: bytes}, signed). Raises OtaError.
 
-    .tgadyn must be signed; .tgascript may be unsigned (signed=False) but a present signature must be valid."""
+    .tgadyn must be signed; .tgascript may be unsigned (signed=False) but a present signature must be valid.
+    extra_keys: raw community public keys tried after the official one (only for .tgadyn). With want_signer=True
+    a 4th value is returned: None for the official key, else the matching community raw key."""
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
@@ -214,15 +216,26 @@ def verify_package(path, public_key_raw, base_name, base_code, flavor, kind=None
         fmt = manifest.get("format") if isinstance(manifest, dict) else None
         if fmt not in KINDS or (kind and kind != fmt):
             raise OtaError("bad_format")
+        signer = None
         signed = SIGNATURE in names
         if not signed and KINDS[fmt]["sig_required"]:
             raise OtaError("unsigned")
         if signed:
+            def _ok(key, sig, msg):
+                try:
+                    Ed25519PublicKey.from_public_bytes(key).verify(sig, msg)
+                    return True
+                except (InvalidSignature, ValueError):
+                    return False
             try:
                 sig = base64.b64decode(zf.read(SIGNATURE)[:512].strip(), validate=True)
-                Ed25519PublicKey.from_public_bytes(public_key_raw).verify(sig, KINDS[fmt]["magic"] + manifest_bytes)
-            except (InvalidSignature, ValueError):
+            except ValueError:
                 raise OtaError("bad_signature")
+            msg = KINDS[fmt]["magic"] + manifest_bytes
+            if not _ok(public_key_raw, sig, msg):
+                signer = next((k for k in extra_keys if k != public_key_raw and fmt == FORMAT and _ok(k, sig, msg)), None)
+                if signer is None:
+                    raise OtaError("bad_signature")
         validate_manifest(manifest)
         check_base(manifest, base_name, base_code, flavor)
         listed = {f["path"]: f for f in manifest["files"]}
@@ -242,4 +255,9 @@ def verify_package(path, public_key_raw, base_name, base_code, flavor, kind=None
                 json.loads(data[RES_STRINGS].decode("utf-8"))
             except ValueError:
                 raise OtaError("bad_manifest", RES_STRINGS)
-    return manifest, data, signed
+    return (manifest, data, signed, signer) if want_signer else (manifest, data, signed)
+
+
+def key_fingerprint(raw):
+    """sha256 of a raw Ed25519 public key (shown in the app), lowercase hex."""
+    return sha256_hex(raw)

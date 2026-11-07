@@ -135,7 +135,13 @@ The store shows cards with colour, icon, version, author, date and a repository 
 third-party catalog (index.json URL, https) and an optional Ed25519 key (64 hex). Foreign sources never get
 verified/official; without a key they are unsigned, with a warning. Same sha256, permission and install-confirm
 checks. Updates from foreign sources are manual only.
-OTA fetches only .tgadyn from the releases/latest of the TgAuto repo; the app does not download or install APKs.
+OTA fetches only .tgadyn from the releases/latest of the TgAuto repo.
+
+### APK updates, auto OTA and community keys (1.9.2)
+- Settings > Updates > "App update (APK)": modes off, notify (default), download and offer, auto. Source: releases/latest of vipa-ch-cloud/TgAuto (TgAuto-X.Y.Z.apk for stable, TgAuto-nightly-X.Y.Z.apk for nightly). Checked at start, at most every 6 hours. The file is downloaded over https to a temp file with progress; size and sha256 (when published) are checked, then the package name and signing certificate MUST match the installed app, otherwise the install is refused. Installation uses PackageInstaller and needs "Install unknown apps" for TgAuto (the settings screen opens for you). Silent "auto" works only where Android allows it (12+ when updating via the same installer); otherwise Android shows its usual prompt.
+- Auto OTA: "download and apply automatically" is on by default, for packages signed by the official key only, with automatic rollback. Check results go to the log in the OTA section.
+- Community keys: Settings > Updates > "Trusted keys". Add an Ed25519 public key (hex or base64) with a name; the sha256 fingerprint is shown and the key can be deleted. A package signed by such a key is installed only manually after an explicit warning (author, fingerprint) and is never treated as official. The official key cannot be removed or replaced. For your own packages see tools/gen_ota_key.py and tools/make_ota.py --key in docs/OTA.md.
+- CRT effect (nightly): a static RGB-subpixel grid with scanlines, soft glow on light text, light chromatic fringe and a vignette; no rolling band and no outlines. Toggle in the console header.
 
 ## Troubleshooting
 - `CANNOT LINK EXECUTABLE "node"`: run `pkg upgrade -y`, then `pkg install -y libc++ nodejs`.

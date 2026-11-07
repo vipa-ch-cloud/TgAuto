@@ -61,3 +61,16 @@ installed one. Base compatibility (`requires_base`, channel) is checked at verif
 (default on, at most once per 6 h); auto-apply is off by default (takes effect after restart). Pre-releases and
 older releases are not examined. The app does NOT download or install APKs (no REQUEST_INSTALL_PACKAGES).
 1.9.1 UI (Compose) changes ship only in the APK; `.tgadyn` carries Python, strings and schemas.
+
+## 1.9.2: APK updates, auto OTA, community keys
+
+- **Auto OTA** (default on): the app fetches `.tgadyn` from releases/latest, applies it only if signed by the official key, keeps the previous version for rollback (boot guard: 2 failed starts). Packages from community keys are never applied automatically. Results are logged in Settings > Updates.
+- **Community keys**: Settings > Updates > Trusted keys (hex or base64 Ed25519 public key + name, sha256 fingerprint shown, deletable). A package whose signature verifies only against such a key shows a warning (author, fingerprint) and needs an explicit confirmation; it is never "official/verified". The official key is built in, is tried first, and cannot be removed or replaced. Domain separation is unchanged: the signed message is `TGADYN1\n` + manifest bytes.
+- **Make your own key and package** (the private key stays outside the repo and is never printed unless `--print-private` is given):
+
+      python3 tools/gen_ota_key.py --out ~/keys/my_ota.pem      # prints public key hex + fingerprint
+      python3 tools/make_ota.py payload --template manifest.json --key ~/keys/my_ota.pem -o my.tgadyn
+      python3 tools/verify_ota.py my.tgadyn --pub official.hex --trust <your public key hex>
+
+  Give users the public key hex and fingerprint over a channel they trust.
+- **APK updates**: assets `TgAuto-X.Y.Z.apk` (stable) and `TgAuto-nightly-X.Y.Z.apk` (nightly) in releases/latest of vipa-ch-cloud/TgAuto; optional sha256 via the asset `digest` or a `SHA256SUMS` / `<file>.sha256` asset. The new APK must have the same package name, a higher versionCode and exactly the same signing certificate set as the installed app, otherwise it is refused. Modes: off / notify (default) / download and offer / auto (silent only where Android allows; otherwise the system prompt is shown). Checked at start, at most every 6 hours.

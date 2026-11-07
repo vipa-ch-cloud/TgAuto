@@ -20,15 +20,19 @@ def main():
     ap.add_argument("--pub", default=APP_PUBLIC_KEY_HEX)
     ap.add_argument("--base-name", default="1.9.0")
     ap.add_argument("--base-code", type=int, default=20)
+    ap.add_argument("--trust", action="append", default=[], help="community public key (hex), may repeat")
     ap.add_argument("--flavor", default="stable", choices=("stable", "nightly"))
     a = ap.parse_args()
     pub = open(a.pub).read().strip() if os.path.isfile(a.pub) else a.pub
     try:
-        m, data, signed = c.verify_package(a.file, bytes.fromhex(pub), a.base_name, a.base_code, a.flavor)
+        m, data, signed, signer = c.verify_package(a.file, bytes.fromhex(pub), a.base_name, a.base_code, a.flavor,
+                                                   extra_keys=[bytes.fromhex(k) for k in a.trust], want_signer=True)
     except c.OtaError as e:
         print(f"REJECTED: {e}")
         sys.exit(1)
     print(f"OK  {m['name']} {m['version']} (build {m['build']}, channel {m['channel']}, {len(data)} files)")
+    if signer is not None:
+        print(f"COMMUNITY-signed (key sha256 {c.key_fingerprint(signer)}): not official, the app asks for explicit confirmation")
     print("requires_base:", m.get("requires_base"))
     print("changelog_en:", m.get("changelog_en", ""))
     print("changelog_ru:", m.get("changelog_ru", ""))

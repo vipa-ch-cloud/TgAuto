@@ -23,7 +23,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("payload")
     ap.add_argument("--template", required=True)
-    ap.add_argument("--key", required=True, help="Ed25519 private key (PEM), kept outside the repo")
+    ap.add_argument("--key", required=True, help="Any Ed25519 private key (PEM), kept outside the repo; use gen_ota_key.py to make one. "
+                    "Packages signed with a non-official key are 'community' packages in the app (explicit warning, never automatic).")
     ap.add_argument("-o", "--output")
     a = ap.parse_args()
     from cryptography.hazmat.primitives import serialization
@@ -54,6 +55,8 @@ def main():
             zi = zipfile.ZipInfo(f["path"], (1980, 1, 1, 0, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
             z.writestr(zi, open(os.path.join(a.payload, f["path"]), "rb").read())
+    pub = key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+    print(f"signer public key {pub.hex()}  fingerprint sha256 {c.key_fingerprint(pub)}")
     print(f"{out}  {os.path.getsize(out)} bytes, {len(files)} files, sha256 of manifest {c.sha256_hex(mb)[:12]}")
 
 
