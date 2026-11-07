@@ -152,6 +152,8 @@ fun ConsoleOverlay(onClose: () -> Unit) {
     val running = ConsoleSession.running
     val listState = rememberLazyListState()
     var input by remember { mutableStateOf(TextFieldValue("")) }
+    var tab by remember { mutableIntStateOf(0) }
+    val look = com.v1pach.telescript.terminal.ConsoleLook(t.bg, t.fg, t.prompt, t.err, t.dim, t.bar, t.ansi)
     var histPos by remember { mutableIntStateOf(-1) }
     var selected by remember { mutableStateOf(setOf<Long>()) }
     val clipboard = LocalClipboard.current
@@ -197,6 +199,11 @@ fun ConsoleOverlay(onClose: () -> Unit) {
                     }
                     IconButton(onClick = onClose) { Icon(Icons.Default.Close, stringResource(R.string.console_close), tint = t.fg) }
                 }
+                com.v1pach.telescript.terminal.ConsoleTabs(look, listOf(stringResource(R.string.console_tab_log),
+                    stringResource(R.string.console_tab_shell), stringResource(R.string.console_tab_cli)), tab) { tab = it }
+                if (tab != 0) {
+                    Box(Modifier.weight(1f).fillMaxWidth()) { com.v1pach.telescript.terminal.ConsolePanels(look, tab, 1) }
+                } else {
                 // scrollback: each line is a full-width hitbox, a tap marks it like a block selection
                 LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState, contentPadding = PaddingValues(vertical = 6.dp)) {
                     items(lines, key = { it.id }) { line ->
@@ -282,6 +289,7 @@ fun ConsoleOverlay(onClose: () -> Unit) {
                     IconButton(onClick = { send(input.text) }, enabled = !running && input.text.isNotBlank()) {
                         Icon(Icons.Default.Send, stringResource(R.string.console_run), tint = if (running) t.dim else t.prompt)
                     }
+                }
                 }
             }
         }

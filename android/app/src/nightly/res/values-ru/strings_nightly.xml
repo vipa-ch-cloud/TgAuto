@@ -4,14 +4,14 @@
     <string name="sec_providers">Провайдеры</string>
     <string name="sec_backend">ИИ-бэкенд</string>
     <string name="console_section_title">Консоль</string>
-    <string name="cli_hint">Небольшой терминал: команды выполняются в Termux (тот же мост, что у скриптов для claude и gemini). Вывод показывается после завершения команды.</string>
+    <string name="cli_hint">Консоль с журналом, полноценной оболочкой и управлением ИИ-CLI во встроенной среде.</string>
     <string name="cli_termux_ok">Termux найден</string>
     <string name="cli_termux_no">Termux не найден</string>
     <string name="cli_perm_ok">RUN_COMMAND разрешён</string>
     <string name="cli_perm_no">Нет разрешения RUN_COMMAND</string>
     <string name="cli_open">Открыть консоль</string>
     <string name="console_title">консоль tgauto</string>
-    <string name="console_hello">Команды выполняются в Termux. Вывод появляется по завершении команды. Ctrl+C прекращает ожидание и убивает процесс.</string>
+    <string name="console_hello">Встроенная оболочка с git, curl, python, node и ИИ-CLI. Вывод идёт потоком. Ctrl+C завершает команду.</string>
     <string name="console_copied">Скопировано</string>
     <string name="console_copy">Копировать (выбранные строки или всё)</string>
     <string name="console_clear">Очистить</string>

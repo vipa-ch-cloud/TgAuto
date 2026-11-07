@@ -24,18 +24,10 @@ private fun SectionLabel(text: String) {
 fun FlavorTopSection() {
     var open by remember { mutableStateOf(false) }
     val crt by ConsoleSession.crt.flow.collectAsStateWithLifecycle()
-    val installed = remember { LlmBridge.termuxInstalled() }
-    val granted = remember { LlmBridge.hasPermission() }
     SectionLabel(stringResource(R.string.sec_cli))
     AppSectionCard {
         SectionHeader(Icons.Default.Terminal, stringResource(R.string.console_section_title))
         Hint(stringResource(R.string.cli_hint))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatusPill(stringResource(if (installed) R.string.cli_termux_ok else R.string.cli_termux_no),
-                if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-            StatusPill(stringResource(if (granted) R.string.cli_perm_ok else R.string.cli_perm_no),
-                if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-        }
         SwitchRow(stringResource(R.string.console_crt), stringResource(R.string.console_crt_hint), crt) { ConsoleSession.crt.set(it) }
         BigButton(stringResource(R.string.cli_open), Icons.Default.Terminal, onClick = { open = true })
     }
@@ -112,4 +104,4 @@ private fun AiBackendCard() {
     }
 }
 
-@Composable fun FlavorTerminalSection() { com.v1pach.telescript.terminal.TerminalCard() }
+@Composable fun FlavorTerminalSection() {}
