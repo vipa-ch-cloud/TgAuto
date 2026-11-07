@@ -4,14 +4,14 @@
     <string name="sec_providers">Providers</string>
     <string name="sec_backend">AI backend</string>
     <string name="console_section_title">Console</string>
-    <string name="cli_hint">A small terminal that runs commands in Termux (the same bridge scripts use for claude and gemini). Output is shown when a command finishes.</string>
+    <string name="cli_hint">Console with a log, a full shell and AI-CLI management, all in the built-in userland.</string>
     <string name="cli_termux_ok">Termux found</string>
     <string name="cli_termux_no">Termux not found</string>
     <string name="cli_perm_ok">RUN_COMMAND allowed</string>
     <string name="cli_perm_no">No RUN_COMMAND permission</string>
     <string name="cli_open">Open console</string>
     <string name="console_title">tgauto console</string>
-    <string name="console_hello">Commands run in Termux. Output appears when a command finishes. Ctrl+C stops waiting and kills the process.</string>
+    <string name="console_hello">Built-in shell with git, curl, python, node and the AI-CLIs. Output streams live. Ctrl+C kills the running command.</string>
     <string name="console_copied">Copied</string>
     <string name="console_copy">Copy (selected lines or all)</string>
     <string name="console_clear">Clear</string>

@@ -12,6 +12,8 @@ class TeleScriptApp : Application() {
         Str.init(this)
         AppSettings.init(this)
         LlmBridge.init(this)
+        com.v1pach.telescript.terminal.TerminalHost.init(this)
+        com.v1pach.telescript.terminal.CliManager.init(this)
         Providers.init(this)
         com.v1pach.telescript.ota.ApkUpdater.init(this)
         OtaManager.init(this) // boot guard + strings overlay, before anything imports OTA-able code

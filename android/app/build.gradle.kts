@@ -53,8 +53,8 @@ android {
             kotlin.srcDir("src/terminal/java")
             res.srcDir("src/terminal/res")
             jniLibs.srcDir("src/terminal/jniLibs")
-            jniLibs.srcDir(layout.buildDirectory.dir("userland/jniLibs"))
-            assets.srcDir(layout.buildDirectory.dir("userland/assets"))
+            jniLibs.srcDir("build/userland/jniLibs")
+            assets.srcDir("build/userland/assets")
         }
     }
     packaging {

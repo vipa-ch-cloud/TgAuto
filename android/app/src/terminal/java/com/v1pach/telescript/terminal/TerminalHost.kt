@@ -20,14 +20,13 @@ import com.v1pach.telescript.Paths
 import java.io.File
 
 object TerminalPrefs {
-    /** The terminal is off until the user switches it on and accepts the warning. */
-    val enabled = AppSettings.Pref("terminal_enabled", false)
-    /** Ask for the device credential (PIN / pattern / fingerprint) when opening the terminal. */
-    val lock = AppSettings.Pref("terminal_lock", true)
     val fontSize = AppSettings.Pref("terminal_font", 14)
     /** Optional http(s) proxy used only by CLI install/update scripts. */
     val httpProxy = AppSettings.Pref("cli_http_proxy", "")
 }
+
+/** Colours (ARGB ints) the terminal view should use; set by the console from its theme. */
+class TermLook(val bg: Int, val fg: Int, val cursor: Int, val ansi: IntArray)
 
 class TermTab(val id: Int, val session: TerminalSession)
 
@@ -36,7 +35,7 @@ class TermTab(val id: Int, val session: TerminalSession)
  * the app's environment. Sessions outlive the activity, but not the process.
  */
 object TerminalHost {
-    const val SHELL = "/system/bin/sh"
+    const val FALLBACK_SHELL = "/system/bin/sh"
 
     private lateinit var app: Context
     val tabs = mutableStateListOf<TermTab>()
@@ -47,30 +46,50 @@ object TerminalHost {
     var ctrl by mutableStateOf(false)
     var alt by mutableStateOf(false)
     @Volatile var view: TerminalView? = null
+    @Volatile var look: TermLook? = null
     private var counter = 0
 
     fun init(context: Context) { app = context.applicationContext }
+    fun context(): Context = app
 
     fun home(): File = File(Paths.root, "home").also { it.mkdirs() }
 
-    private fun prepareHome() {
-        val rc = File(home(), ".mkshrc")
-        if (!rc.exists() || rc.readText() != CliLogic.MKSHRC) rc.writeText(CliLogic.MKSHRC)
-    }
-
-    fun newTab(): TermTab {
-        prepareHome()
-        val env = CliLogic.shellEnv(Paths.root.absolutePath, app.cacheDir.absolutePath, Paths.llmBin.absolutePath,
-            Paths.mirror.absolutePath, app.applicationInfo.nativeLibraryDir).toTypedArray()
-        val s = TerminalSession(SHELL, home().absolutePath, arrayOf("sh"), env, 4000, sessionClient)
-        s.mSessionName = "sh ${++counter}"
+    /** Opens a shell tab; [firstLine] (e.g. a login command) is typed once the shell starts. Never throws. */
+    fun newTab(firstLine: String? = null): TermTab? = runCatching {
+        val useUserland = Userland.ready(app) || Userland.ensure(app)
+        val s = if (useUserland) {
+            val usr = Userland.prefix(app).absolutePath
+            TerminalSession(Userland.bash(app).path, home().absolutePath,
+                arrayOf("bash", "--rcfile", "$usr/etc/tga-bashrc", "-i"),
+                Userland.env(app, CliManager.proxy()).toTypedArray(), 4000, sessionClient)
+        } else {
+            val env = arrayOf("HOME=${home().absolutePath}", "TERM=xterm-256color", "PATH=/system/bin:/system/xbin",
+                "TMPDIR=${app.cacheDir.absolutePath}", "LANG=en_US.UTF-8")
+            TerminalSession(FALLBACK_SHELL, home().absolutePath, arrayOf("sh"), env, 4000, sessionClient)
+        }
+        s.mSessionName = (if (useUserland) "bash " else "sh ") + (++counter)
         val tab = TermTab(counter, s)
         tabs.add(tab)
         selected = tabs.lastIndex
-        return tab
-    }
+        if (firstLine != null) Thread {
+            Thread.sleep(700)
+            runCatching { s.write(firstLine + "\n") }
+        }.start()
+        tab
+    }.getOrNull()
 
     fun ensureTab() { if (tabs.isEmpty()) newTab() }
+
+    /** Applies the console theme to a session's emulator colours. */
+    fun applyLook(session: TerminalSession) {
+        val l = look ?: return
+        val e = session.emulator ?: return
+        val c = e.mColors.mCurrentColors
+        for (i in 0 until 16) c[i] = l.ansi[i]
+        c[com.termux.terminal.TextStyle.COLOR_INDEX_FOREGROUND] = l.fg
+        c[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND] = l.bg
+        c[com.termux.terminal.TextStyle.COLOR_INDEX_CURSOR] = l.cursor
+    }
 
     fun close(index: Int) {
         val t = tabs.getOrNull(index) ?: return
@@ -175,7 +194,7 @@ object TerminalHost {
             ctrl = false; alt = false // one-shot toggles of the extra-keys row
             return false
         }
-        override fun onEmulatorSet() {}
+        override fun onEmulatorSet() { current()?.session?.let { applyLook(it) } }
         override fun logError(tag: String?, message: String?) {}
         override fun logWarn(tag: String?, message: String?) {}
         override fun logInfo(tag: String?, message: String?) {}
