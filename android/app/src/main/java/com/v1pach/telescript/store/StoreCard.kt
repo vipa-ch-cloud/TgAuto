@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
 import com.v1pach.telescript.R
 import com.v1pach.telescript.ui.AppSectionCard
 import com.v1pach.telescript.ui.Hint
