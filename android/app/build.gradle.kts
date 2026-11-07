@@ -19,6 +19,8 @@ android {
         }
     }
 
+    // Terminal + AI CLI live in src/terminal. 1.9.2: nightly only. For 1.9.3 flip this to true (one edit).
+    val terminalInStable = false
     flavorDimensions += "channel"
     productFlavors {
         create("stable") { dimension = "channel" }
@@ -43,6 +45,15 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    sourceSets {
+        val flavors = if (terminalInStable) listOf("nightly", "stable") else listOf("nightly")
+        for (f in flavors) getByName(f).apply {
+            java.srcDir("src/terminal/java")
+            kotlin.srcDir("src/terminal/java")
+            res.srcDir("src/terminal/res")
+            manifest.srcFile("src/terminal/AndroidManifest.xml")
+        }
     }
     packaging {
         // The `claude` shim (jniLibs/*/libclaude.so, a shell script) must be extracted to
@@ -81,7 +92,8 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.zxing.core)
     // Terminal emulator + view from termux-app (Apache-2.0 parts, see docs/TERMINAL.md). Native libtermux.so does the PTY.
-    implementation(libs.termux.terminal.emulator)
-    implementation(libs.termux.terminal.view)
+    // nightly only in 1.9.2 (terminalInStable above; for 1.9.3 use implementation(...) here)
+    "nightlyImplementation"(libs.termux.terminal.emulator)
+    "nightlyImplementation"(libs.termux.terminal.view)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

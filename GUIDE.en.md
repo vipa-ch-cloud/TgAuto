@@ -143,7 +143,7 @@ OTA fetches only .tgadyn from the releases/latest of the TgAuto repo.
 - Community keys: Settings > Updates > "Trusted keys". Add an Ed25519 public key (hex or base64) with a name; the sha256 fingerprint is shown and the key can be deleted. A package signed by such a key is installed only manually after an explicit warning (author, fingerprint) and is never treated as official. The official key cannot be removed or replaced. For your own packages see tools/gen_ota_key.py and tools/make_ota.py --key in docs/OTA.md.
 - CRT effect (nightly): a static RGB-subpixel grid with scanlines, soft glow on light text, light chromatic fringe and a vignette; no rolling band and no outlines. Toggle in the console header.
 
-## 16. Terminal and AI CLI (1.9.2)
+## 16. Terminal and AI CLI (1.9.2, TgAuto Nightly only; stable from 1.9.3)
 
 Settings has a "Terminal and AI CLI" card. The terminal is off by default; enabling it needs a confirmation and shows a warning.
 

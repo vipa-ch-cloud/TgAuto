@@ -3,7 +3,7 @@
     <string name="sec_cli">CLI</string>
     <string name="sec_providers">Провайдеры</string>
     <string name="sec_backend">ИИ-бэкенд</string>
-    <string name="cli_title">Консоль</string>
+    <string name="console_section_title">Консоль</string>
     <string name="cli_hint">Небольшой терминал: команды выполняются в Termux (тот же мост, что у скриптов для claude и gemini). Вывод показывается после завершения команды.</string>
     <string name="cli_termux_ok">Termux найден</string>
     <string name="cli_termux_no">Termux не найден</string>

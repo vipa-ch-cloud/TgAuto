@@ -28,7 +28,7 @@ fun FlavorTopSection() {
     val granted = remember { LlmBridge.hasPermission() }
     SectionLabel(stringResource(R.string.sec_cli))
     AppSectionCard {
-        SectionHeader(Icons.Default.Terminal, stringResource(R.string.cli_title))
+        SectionHeader(Icons.Default.Terminal, stringResource(R.string.console_section_title))
         Hint(stringResource(R.string.cli_hint))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatusPill(stringResource(if (installed) R.string.cli_termux_ok else R.string.cli_termux_no),
@@ -111,3 +111,5 @@ private fun AiBackendCard() {
         Hint(stringResource(R.string.ai_enforced))
     }
 }
+
+@Composable fun FlavorTerminalSection() { com.v1pach.telescript.terminal.TerminalCard() }

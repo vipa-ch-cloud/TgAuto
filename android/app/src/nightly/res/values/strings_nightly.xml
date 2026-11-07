@@ -3,7 +3,7 @@
     <string name="sec_cli">CLI</string>
     <string name="sec_providers">Providers</string>
     <string name="sec_backend">AI backend</string>
-    <string name="cli_title">Console</string>
+    <string name="console_section_title">Console</string>
     <string name="cli_hint">A small terminal that runs commands in Termux (the same bridge scripts use for claude and gemini). Output is shown when a command finishes.</string>
     <string name="cli_termux_ok">Termux found</string>
     <string name="cli_termux_no">Termux not found</string>

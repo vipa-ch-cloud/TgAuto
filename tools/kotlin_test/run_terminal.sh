@@ -3,7 +3,7 @@
 # from the Gradle cache (kotlin-compiler-embeddable + stdlib).
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
-SRC="$HERE/../../android/app/src/main/java/com/v1pach/telescript/terminal/CliLogic.kt"
+SRC="$HERE/../../android/app/src/terminal/java/com/v1pach/telescript/terminal/CliLogic.kt"
 OUT=$(mktemp -d)
 if command -v kotlinc >/dev/null 2>&1; then
   kotlinc -nowarn -d "$OUT" "$SRC" "$HERE/TerminalLogicTest.kt"

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Terminal + AI CLI pieces: compiled only into flavors listed in build.gradle.kts (terminalInStable). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Built-in terminal: not exported, no intent filters, never reads commands from an intent. -->
+        <activity
+            android:name=".terminal.TerminalActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:excludeFromRecents="true" />
+    </application>
+</manifest>

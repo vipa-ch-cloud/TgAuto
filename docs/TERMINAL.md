@@ -1,5 +1,7 @@
 # Terminal and AI CLI (1.9.2)
 
+**Availability: in 1.9.2 the terminal and the AI CLI exist only in the nightly flavor.** The stable build has no TerminalActivity, no terminal UI and no libtermux.so/JitPack dependency. They reach stable in 1.9.3 (together with dex). The code lives in `android/app/src/terminal/` (java, res, AndroidManifest.xml) and is attached to flavors in `android/app/build.gradle.kts`. To ship it in stable, set `terminalInStable = true` and change the two `"nightlyImplementation"(libs.termux...)` lines to `implementation(...)`; also add a `FlavorTerminalSection()` body in `src/stable/.../FlavorSections.kt` that calls `TerminalCard()`.
+
 Русская краткая версия: раздел 16 в GUIDE.md.
 
 ## Architecture (hybrid)
