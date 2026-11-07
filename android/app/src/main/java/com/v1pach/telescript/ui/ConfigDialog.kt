@@ -30,6 +30,7 @@ fun ConfigDialog(script: ScriptInfo, running: Boolean, onClose: () -> Unit) {
     var saveError by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(false) }
     val forms = remember { mutableStateListOf<FieldForm>() }
+    var styleOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(script.id) {
         val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -51,6 +52,7 @@ fun ConfigDialog(script: ScriptInfo, running: Boolean, onClose: () -> Unit) {
     val anyDirty = forms.any { it.dirty }
     val hasError = errors.values.any { it != null }
 
+    StyleHost(script, styleOpen) { styleOpen = false }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
@@ -96,6 +98,10 @@ fun ConfigDialog(script: ScriptInfo, running: Boolean, onClose: () -> Unit) {
                     if (saveError.isNotEmpty()) Hint(saveError, MaterialTheme.colorScheme.error)
                     if (saved && !anyDirty) Hint(
                         stringResource(if (running) R.string.cfg_saved_restart else R.string.cfg_saved))
+                    if (script.id == "autoresponder") {
+                        BigButton(stringResource(R.string.style_open), Icons.Default.Psychology, onClick = { styleOpen = true },
+                            modifier = Modifier.padding(top = 8.dp))
+                    }
                     Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         BigButton(stringResource(R.string.cfg_reset), Icons.Default.RestartAlt, modifier = Modifier.weight(1f),
                             enabled = !blocked, onClick = { forms.forEach { it.setDefault() }; saved = false; saveError = "" })
@@ -117,6 +123,9 @@ fun ConfigDialog(script: ScriptInfo, running: Boolean, onClose: () -> Unit) {
         }
     }
 }
+
+@Composable
+private fun StyleHost(script: ScriptInfo, open: Boolean, onClose: () -> Unit) { if (open) StyleDialog(script, onClose) }
 
 @Composable
 private fun FieldEditor(form: FieldForm, error: String?, enabled: Boolean) {

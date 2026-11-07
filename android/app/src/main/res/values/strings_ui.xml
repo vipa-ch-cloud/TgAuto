@@ -81,4 +81,25 @@
     <string name="cfg_item">Item %1$d</string>
     <string name="cfg_delete">Delete</string>
     <string name="cfg_add">Add</string>
+    <string name="style_open">Style analysis</string>
+    <string name="style_title">Writing style analysis</string>
+    <string name="style_intro">Choose chats: the script reads your own recent messages there and asks the configured model to describe your style. You can edit the text before saving. Messages are sent to the model only as plain text.</string>
+    <string name="style_load">Load chats</string>
+    <string name="style_loading">Loading chats...</string>
+    <string name="style_analyzing">Reading messages and analysing...</string>
+    <string name="style_all_folder">Folder chats</string>
+    <string name="style_all">All</string>
+    <string name="style_none">None</string>
+    <string name="style_analyze">Analyse selected</string>
+    <string name="style_selected">Selected: %1$d</string>
+    <string name="style_result">Style description (editable)</string>
+    <string name="style_stats">Messages: %1$d, chats: %2$d</string>
+    <string name="style_save">Save as autoresponder style</string>
+    <string name="style_saved">Saved. Restart the autoresponder; use .start imit.</string>
+    <string name="style_running">Stop the autoresponder first: the analysis uses the same account session.</string>
+    <string name="style_old">The autoresponder script has no style analysis (needs 1.2.0+). Update it in the store.</string>
+    <string name="style_has_saved">A saved style exists; saving replaces it.</string>
+    <string name="style_close">Close</string>
+    <string name="style_failed">Failed: %1$s</string>
+    <string name="style_no_chats">No private chats found.</string>
 </resources>

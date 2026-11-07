@@ -167,3 +167,8 @@ Details: `docs/TERMINAL.md`.
 - Script errors are in the "Logs" tab.
 
 Everyone needs their own Claude account and api_id/api_hash: you do steps 3 (and 3b if you need Gemini) and 6 yourself.
+
+## 17. Version 1.9.3
+- The "Terminal and AI CLI" card in Settings no longer shows the red warning.
+- Script store: the classic 1.9.0 card look is back (title, description, badges, an "author · date · repository" line); metadata, community sources, search, auto-update and install from file work as before.
+- Autoresponder: Scripts > Config > "Style analysis". Pick chats, the script reads your latest messages and asks the configured model to describe your style; edit the text and save it as the style for `.start imit`. Requires autoresponder script 1.2.0+ with the autoresponder stopped.

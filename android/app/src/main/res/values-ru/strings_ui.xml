@@ -81,4 +81,25 @@
     <string name="cfg_item">Пункт %1$d</string>
     <string name="cfg_delete">Удалить</string>
     <string name="cfg_add">Добавить</string>
+    <string name="style_open">Анализ стиля</string>
+    <string name="style_title">Анализ стиля письма</string>
+    <string name="style_intro">Выберите чаты: скрипт прочитает там ваши последние сообщения и попросит настроенную модель описать ваш стиль. Текст можно поправить перед сохранением. Сообщения уходят модели только как обычный текст.</string>
+    <string name="style_load">Загрузить чаты</string>
+    <string name="style_loading">Загрузка чатов...</string>
+    <string name="style_analyzing">Чтение сообщений и анализ...</string>
+    <string name="style_all_folder">Чаты папки</string>
+    <string name="style_all">Все</string>
+    <string name="style_none">Снять</string>
+    <string name="style_analyze">Анализировать выбранные</string>
+    <string name="style_selected">Выбрано: %1$d</string>
+    <string name="style_result">Описание стиля (можно править)</string>
+    <string name="style_stats">Сообщений: %1$d, чатов: %2$d</string>
+    <string name="style_save">Сохранить как стиль автоответчика</string>
+    <string name="style_saved">Сохранено. Перезапустите автоответчик; используйте .start imit.</string>
+    <string name="style_running">Сначала остановите автоответчик: анализ использует ту же сессию аккаунта.</string>
+    <string name="style_old">В скрипте автоответчика нет анализа стиля (нужна версия 1.2.0+). Обновите его в магазине.</string>
+    <string name="style_has_saved">Сохранённый стиль уже есть; сохранение заменит его.</string>
+    <string name="style_close">Закрыть</string>
+    <string name="style_failed">Ошибка: %1$s</string>
+    <string name="style_no_chats">Личные чаты не найдены.</string>
 </resources>
