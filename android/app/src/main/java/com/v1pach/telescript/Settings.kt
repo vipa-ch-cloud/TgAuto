@@ -85,6 +85,10 @@ object AppSettings {
     val apkNotified = Pref("apk_notified", "")
     val otaLastCheck = Pref("ota_last_check", "0")
     val otaNotified = Pref("ota_notified", "")
+    /** .tgadex plugin: apply automatically (official key only). Default OFF: it is executable code. */
+    val dexAutoApply = Pref("dex_auto_apply", false)
+    val dexLastCheck = Pref("dex_last_check", "0")
+    val dexNotified = Pref("dex_notified", "")
     val storeAutoUpdate = Pref("store_auto_update", false)
     val storeLastCheck = Pref("store_last_check", "0")
     /** Community catalog sources added by the user (JSON array; the official one is built in). */

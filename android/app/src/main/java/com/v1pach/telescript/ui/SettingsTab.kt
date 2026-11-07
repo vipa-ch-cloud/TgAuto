@@ -115,6 +115,7 @@ fun SettingsTab() {
         }
 
         OtaSection()
+        DexSection()
         ApkUpdateSection()
         TrustedKeysSection()
         OtaLog()

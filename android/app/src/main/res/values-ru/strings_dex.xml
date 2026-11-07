@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dex_title">Плагин (.tgadex)</string>
+    <string name="dex_hint">Подписанный пакет с кодом и интерфейсом (dex). Работает внутри приложения с его правами. Автоматически применяется только официальный ключ; ключи сообщества работают только вручную и с предупреждением.</string>
+    <string name="dex_none">Плагин не установлен (встроенный код).</string>
+    <string name="dex_installed">Плагин: %1$s %2$s</string>
+    <string name="dex_unofficial">Подписан ключом сообщества: НЕ официальный.</string>
+    <string name="dex_state_loaded">Статус: загружен и работает.</string>
+    <string name="dex_state_pending">Статус: установлен, загрузится при следующем запуске.</string>
+    <string name="dex_state_error">Статус: не удалось загрузить (%1$s).</string>
+    <string name="dex_rolled_back">Плагин %1$s дважды не запустился и был автоматически откачен.</string>
+    <string name="dex_from_file">Установить плагин из файла (.tgadex)</string>
+    <string name="dex_check">Проверить плагин в релизах GitHub</string>
+    <string name="dex_auto_apply">Применять официальные обновления плагина автоматически</string>
+    <string name="dex_auto_apply_hint">Выключено по умолчанию. Только пакеты с официальной подписью; применяются при следующем запуске, откат после двух неудачных стартов.</string>
+    <string name="dex_rollback">Откатить на предыдущий плагин</string>
+    <string name="dex_remove">Удалить плагин</string>
+    <string name="dex_remove_text">Плагин удаляется, приложение использует только встроенный код. Вступит в силу при следующем запуске.</string>
+    <string name="dex_screen_failed">Не удалось открыть экран плагина.</string>
+    <string name="dex_install_title">Плагин (.tgadex)</string>
+    <string name="dex_field_id">%1$s, версия %2$s (сборка %3$d)</string>
+    <string name="dex_field_req">Требует приложение %1$s+, API плагинов %2$d, канал %3$s</string>
+    <string name="dex_field_entry">Класс входа: %1$s</string>
+    <string name="dex_field_installed">Установленный плагин: %1$s</string>
+    <string name="dex_code_warning_title">Этот пакет выполняет код</string>
+    <string name="dex_code_warning">Плагин выполняется внутри TgAuto с полным доступом к приложению и его данным. Ставьте только от авторов, которым доверяете.</string>
+    <string name="dex_community_confirm">Я доверяю автору и принимаю риск</string>
+    <string name="dex_installed_restart">Плагин %1$s установлен. Полностью закройте и откройте приложение, чтобы загрузить его.</string>
+    <string name="dex_notif_available">Доступно обновление плагина %1$s (Настройки &gt; Обновления).</string>
+    <string name="dex_notif_applied">Плагин %1$s установлен; перезапустите приложение для загрузки.</string>
+    <string name="ota_err_bad_dex">Файл не является корректным dex.</string>
+    <string name="ota_err_wrong_api">Плагину нужна другая версия API, чем в этом приложении.</string>
+</resources>
