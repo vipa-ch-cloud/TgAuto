@@ -51,6 +51,7 @@ object ConsoleSession {
         running = true
         interrupted = false
         scope.launch {
+          try {
             val ctx = com.v1pach.telescript.terminal.TerminalHost.context()
             val r = com.v1pach.telescript.terminal.Userland.run(ctx, cmd, 1800, "", onProc = { proc = it }) { line ->
                 emit(LineKind.OUT, line + "\n")
@@ -60,6 +61,9 @@ object ConsoleSession {
             if (wasInterrupted) info("^C")
             else if (r.exit != 0) info("[exit ${r.exit}]")
             running = false
+          } catch (t: Throwable) {
+            info("[error] $t")
+          } finally { running = false; proc = null }
         }
     }
 

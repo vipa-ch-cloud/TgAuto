@@ -45,6 +45,8 @@ object TerminalHost {
         private set
     var ctrl by mutableStateOf(false)
     var alt by mutableStateOf(false)
+    /** Last start-up error, shown in the shell tab instead of crashing the app. */
+    var error by mutableStateOf<String?>(null)
     @Volatile var view: TerminalView? = null
     @Volatile var look: TermLook? = null
     private var counter = 0
@@ -76,7 +78,7 @@ object TerminalHost {
             runCatching { s.write(firstLine + "\n") }
         }.start()
         tab
-    }.getOrNull()
+    }.onFailure { error = "shell: $it" }.getOrNull()
 
     fun ensureTab() { if (tabs.isEmpty()) newTab() }
 
@@ -93,7 +95,7 @@ object TerminalHost {
 
     fun close(index: Int) {
         val t = tabs.getOrNull(index) ?: return
-        t.session.finishIfRunning()
+        runCatching { t.session.finishIfRunning() }
         tabs.removeAt(index)
         selected = selected.coerceIn(0, (tabs.size - 1).coerceAtLeast(0))
         tick++
@@ -169,7 +171,7 @@ object TerminalHost {
             if (this.scale < 0.9f || this.scale > 1.1f) {
                 val size = (TerminalPrefs.fontSize.value + if (this.scale > 1f) 1 else -1).coerceIn(8, 32)
                 TerminalPrefs.fontSize.set(size)
-                view?.setTextSize(size)
+                runCatching { view?.setTextSize(size) }
                 this.scale = 1f
             }
             return this.scale
@@ -202,5 +204,15 @@ object TerminalHost {
         override fun logVerbose(tag: String?, message: String?) {}
         override fun logStackTraceWithMessage(tag: String?, message: String?, e: Exception?) {}
         override fun logStackTrace(tag: String?, e: Exception?) {}
+    }
+}
+
+/** TerminalView whose layout/draw failures (PTY/JNI start in onSizeChanged) are reported instead of crashing the app. */
+class SafeTerminalView(context: Context) : TerminalView(context, null) {
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        try { super.onSizeChanged(w, h, oldw, oldh) } catch (t: Throwable) { TerminalHost.error = "pty: $t" }
+    }
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        try { super.onDraw(canvas) } catch (t: Throwable) { TerminalHost.error = "draw: $t" }
     }
 }

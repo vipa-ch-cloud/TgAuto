@@ -86,7 +86,7 @@ fun UserlandGate(look: ConsoleLook, content: @Composable () -> Unit) {
             }
         }
     } else {
-        if (failed) Text(stringResource(R.string.userland_failed), color = look.err, fontFamily = MONO, fontSize = 12.sp,
+        if (failed) Text(stringResource(R.string.userland_failed) + (Userland.lastError?.let { ": $it" } ?: ""), color = look.err, fontFamily = MONO, fontSize = 12.sp,
             modifier = Modifier.padding(8.dp))
         else if (!Userland.supported(ctx)) Text(stringResource(R.string.userland_unsupported), color = look.dim, fontFamily = MONO,
             fontSize = 12.sp, modifier = Modifier.padding(8.dp))
@@ -168,24 +168,26 @@ fun ShellPanel(look: ConsoleLook) {
             Icon(Icons.Default.Add, stringResource(R.string.term_new_tab), tint = look.fg,
                 modifier = Modifier.padding(6.dp).size(22.dp).clickable { TerminalHost.newTab() })
         }
+        TerminalHost.error?.let { Text(it, color = look.err, fontFamily = MONO, fontSize = 12.sp, modifier = Modifier.padding(8.dp)) }
         if (tab != null) {
             val size = TerminalPrefs.fontSize.value
             key(tab.id) {
                 AndroidView(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     factory = { ctx ->
-                        TerminalView(ctx, null).apply {
+                        SafeTerminalView(ctx).apply {
                             setBackgroundColor(look.bg.toArgb())
                             setTerminalViewClient(TerminalHost.viewClient)
-                            setTypeface(Typeface.MONOSPACE)
-                            setTextSize(size)
+                            // setTextSize creates the TerminalRenderer; setTypeface needs it (NPE in 1.9.3 when called first).
+                            runCatching { setTextSize(size); setTypeface(Typeface.MONOSPACE) }
+                                .onFailure { TerminalHost.error = "view: $it" }
                             isFocusable = true
                             isFocusableInTouchMode = true
-                            attachSession(tab.session)
+                            runCatching { attachSession(tab.session) }.onFailure { TerminalHost.error = "attach: $it" }
                             TerminalHost.view = this
                             TerminalHost.applyLook(tab.session)
                             requestFocus()
-                            post { (ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(this, 0) }
+                            post { runCatching { (ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(this, 0) } }
                         }
                     },
                     update = { TerminalHost.applyLook(tab.session); it.onScreenUpdated() },

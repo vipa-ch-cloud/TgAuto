@@ -50,8 +50,10 @@ object Userland {
             writeEnvFiles(context)
             stamp(context).writeText(want)
             true
-        }.getOrElse { false }
+        }.getOrElse { lastError = it.toString(); false }
     }
+
+    @Volatile var lastError: String? = null
 
     private fun unpack(context: Context, usr: File) {
         val symlinks = ArrayList<Pair<File, String>>()
