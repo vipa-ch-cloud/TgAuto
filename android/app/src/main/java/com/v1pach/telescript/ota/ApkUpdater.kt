@@ -110,6 +110,13 @@ object ApkUpdater {
     fun unknownSourcesIntent(): Intent =
         Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${app.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
+    /** ACTION_VIEW intent for the system installer (tap target of the "downloaded" notification). */
+    fun viewIntent(apk: File): Intent {
+        val uri = FileProvider.getUriForFile(app, "${app.packageName}.apkfiles", apk)
+        return Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
     /**
      * Installs through PackageInstaller. [silent] requests USER_ACTION_NOT_REQUIRED (Android 12+; the OS honours it only
      * when this app is the installer of record and the update meets its conditions, otherwise it asks as usual).
@@ -131,9 +138,11 @@ object ApkUpdater {
             OtaManager.log("APK install session committed (${if (silent) "no-prompt requested" else "user confirmation"})")
         } catch (e: Throwable) {
             OtaManager.log("PackageInstaller failed (${e.message}), falling back to system installer")
-            val uri = FileProvider.getUriForFile(app, "${app.packageName}.apkfiles", apk)
-            app.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+            val view = viewIntent(apk)
+            try { app.startActivity(view) } catch (e2: Throwable) {
+                // background activity start is blocked on Android 10+: leave a tappable notification instead
+                OtaManager.notify(app.getString(R.string.apk_notif_ready, "") , 7002, view)
+            }
         }
     }
 
@@ -181,7 +190,9 @@ object ApkUpdater {
             if (mode == "auto" && canInstall()) { install(f, silent = true) }
             else {
                 OtaManager.log("APK ${r.version} downloaded; open Settings > Updates to install")
-                OtaManager.notify(app.getString(R.string.apk_notif_ready, r.version), 7002)
+                // tap installs: system installer for the file, or the "unknown sources" screen when not allowed yet
+                OtaManager.notify(app.getString(R.string.apk_notif_ready, r.version), 7002,
+                    if (canInstall()) viewIntent(f) else unknownSourcesIntent())
             }
         } catch (e: Throwable) {
             OtaManager.log("APK ${r.version} rejected: ${OtaManager.errorText(e)}")
