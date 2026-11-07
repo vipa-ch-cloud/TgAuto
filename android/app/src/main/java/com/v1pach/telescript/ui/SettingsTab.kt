@@ -51,9 +51,11 @@ fun SettingsTab() {
     ) {
         TabHeader(stringResource(R.string.settings_title))
 
+        FlavorTopSection()
+
         LlmCard()
 
-        if (BuildConfig.FLAVOR == "nightly") ProvidersCard()
+        FlavorLlmSections()
 
         ConfigEditorCard()
 
@@ -109,6 +111,8 @@ fun SettingsTab() {
                 BigButton(stringResource(R.string.settings_battery_btn), Icons.Default.BatterySaver, onClick = { requestIgnoreBattery(context) })
             }
         }
+
+        OtaSection()
 
         AppSectionCard {
             SectionHeader(Icons.Default.Info, stringResource(R.string.settings_about))
@@ -196,11 +200,14 @@ private fun validateJson(text: String): String? {
 @Composable
 private fun LlmCard() {
     val context = LocalContext.current
-    val order by AppSettings.llmOrder.flow.collectAsStateWithLifecycle()
+    val orderPref by AppSettings.llmOrder.flow.collectAsStateWithLifecycle()
+    val order = FlavorHooks.cliOrderState(orderPref)
     val key by AppSettings.anthropicKey.flow.collectAsStateWithLifecycle()
     val model by AppSettings.model.flow.collectAsStateWithLifecycle()
     val claudeCmd by AppSettings.termuxCommand.flow.collectAsStateWithLifecycle()
     val geminiCmd by AppSettings.geminiCommand.flow.collectAsStateWithLifecycle()
+    val codexCmd by AppSettings.codexCommand.flow.collectAsStateWithLifecycle()
+    val codexOn = FlavorHooks.codexState(orderPref)
     var installed by remember { mutableStateOf(LlmBridge.termuxInstalled()) }
     var granted by remember { mutableStateOf(LlmBridge.hasPermission()) }
     var testing by remember { mutableStateOf<String?>(null) }
@@ -236,6 +243,8 @@ private fun LlmCard() {
                                 addAll(LlmBridge.TOOLLESS)
                             }
                             LlmBridge.run(name, args, prompt, 120)
+                        } else if (name == "codex") {
+                            LlmBridge.run(name, listOf("exec", "--sandbox", "read-only", "--ephemeral", "--skip-git-repo-check", "-"), prompt, 120)
                         } else {
                             LlmBridge.run(name, listOf("-p", prompt), "", 120)
                         }
@@ -248,7 +257,7 @@ private fun LlmCard() {
             val ok = r.exitCode == 0 && r.stdout.isNotBlank()
             StatusPill(if (ok) stringResource(R.string.settings_ok) else stringResource(R.string.settings_err_code, r.exitCode),
                 if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-            LlmBridge.explain(r).takeIf { it.isNotEmpty() }?.let {
+            LlmBridge.explain(r, name).takeIf { it.isNotEmpty() }?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             }
             val text = listOf(r.stdout.trim(), r.stderr.trim()).filter { it.isNotEmpty() }.joinToString("\n")
@@ -263,8 +272,8 @@ private fun LlmCard() {
     AppSectionCard {
         SectionHeader(Icons.Default.AutoAwesome, "LLM")
         Hint(stringResource(R.string.settings_llm_hint))
-        Text(stringResource(R.string.settings_order), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        listOf(
+        if (!FlavorHooks.managesBackend) Text(stringResource(R.string.settings_order), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!FlavorHooks.managesBackend) listOf(
             "both" to stringResource(R.string.settings_order_both),
             "claude" to stringResource(R.string.settings_order_claude),
             "gemini" to stringResource(R.string.settings_order_gemini),
@@ -275,7 +284,7 @@ private fun LlmCard() {
             }
         }
 
-        if (order != "api") {
+        if (order != "api" || codexOn) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 StatusPill(if (installed) stringResource(R.string.settings_termux_installed) else stringResource(R.string.settings_termux_missing),
                     if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
@@ -286,10 +295,12 @@ private fun LlmCard() {
                 BigButton(stringResource(R.string.settings_allow_termux), Icons.Default.Key,
                     onClick = { permission.launch(LlmBridge.PERMISSION) })
             }
-            if (order != "gemini") Account("claude", stringResource(R.string.settings_claude_acc), claudeCmd,
+            if (order == "both" || order == "claude") Account("claude", stringResource(R.string.settings_claude_acc), claudeCmd,
                 { AppSettings.termuxCommand.set(it) }, stringResource(R.string.settings_claude_hint))
-            if (order != "claude") Account("gemini", stringResource(R.string.settings_gemini_acc), geminiCmd,
+            if (order == "both" || order == "gemini") Account("gemini", stringResource(R.string.settings_gemini_acc), geminiCmd,
                 { AppSettings.geminiCommand.set(it) }, stringResource(R.string.settings_gemini_hint))
+            if (codexOn) Account("codex", stringResource(R.string.settings_codex_acc), codexCmd,
+                { AppSettings.codexCommand.set(it) }, stringResource(R.string.settings_codex_hint))
             TextButton(onClick = { showSteps = !showSteps }) {
                 Text(if (showSteps) stringResource(R.string.settings_hide_steps) else stringResource(R.string.settings_show_steps))
             }
@@ -308,6 +319,7 @@ private fun LlmCard() {
 
 @Composable
 private fun TermuxSteps() {
+    val codexStep = stringResource(R.string.settings_step_codex)
     val steps = listOf(
         stringResource(R.string.settings_step1) to null,
         stringResource(R.string.settings_step2) to
@@ -315,10 +327,12 @@ private fun TermuxSteps() {
         stringResource(R.string.settings_step3) to "claude",
         stringResource(R.string.settings_step4) to
             "pkg install -y python make clang\nnpm install -g @google/gemini-cli --ignore-scripts\ngemini",
+        codexStep to
+            "pkg install -y codex   # or: npm i -g @openai/codex\ncodex login   # codex login --device-auth without a browser",
         stringResource(R.string.settings_step5) to
             "mkdir -p ~/.termux && echo 'allow-external-apps=true' >> ~/.termux/termux.properties\ntermux-reload-settings",
         stringResource(R.string.settings_step6) to null,
-    )
+    ).filterNot { it.first == codexStep && !FlavorHooks.managesBackend }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         steps.forEachIndexed { i, (text, code) ->
             Text("${i + 1}. $text", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)

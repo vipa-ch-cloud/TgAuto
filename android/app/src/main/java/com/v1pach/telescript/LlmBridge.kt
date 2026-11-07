@@ -55,21 +55,22 @@ object LlmBridge {
      * Links the shim into Paths.llmBin (as `claude`) and starts the spool poller.
      * Removes the link in API-key mode so automod's "auto" backend picks the API.
      */
-    fun setup(order: String) {
+    fun setup(order: String, codex: Boolean = false) {
         Paths.llmBin.mkdirs()
         Paths.llmSpool.mkdirs()
         val target = File(app.applicationInfo.nativeLibraryDir, "libclaude.so").absolutePath
         // Only the CLIs the user allowed get a link, so scripts fall back claude -> gemini -> API key.
-        for (name in listOf("claude", "gemini")) {
+        for (name in listOf("claude", "gemini", "codex")) {
             val link = File(Paths.llmBin, name)
-            if (!(order == "both" || order == name)) { link.delete(); continue }
+            val allowed = if (name == "codex") codex else (order == "both" || order == name)
+            if (!allowed) { link.delete(); continue }
             val current = runCatching { android.system.Os.readlink(link.absolutePath) }.getOrNull()
             if (current != target) {
                 link.delete()
                 android.system.Os.symlink(target, link.absolutePath)
             }
         }
-        if (order != "api") startPoller()
+        if (order != "api" || codex) startPoller()
     }
 
     @Synchronized
@@ -121,32 +122,48 @@ object LlmBridge {
 
     /** Runs `claude`/`gemini <args>` in Termux with [stdin] as its standard input. Blocking. */
     fun run(name: String, args: List<String>, stdin: String, timeoutS: Long = TIMEOUT_S): Result {
-        require(name == "claude" || name == "gemini") { "unknown command $name" }
+        require(name == "claude" || name == "gemini" || name == "codex") { "unknown command $name" }
+        val pref = when (name) {
+            "gemini" -> AppSettings.geminiCommand
+            "codex" -> AppSettings.codexCommand
+            else -> AppSettings.termuxCommand
+        }
+        val cmd = pref.value.trim().ifEmpty { name }
+        // An empty working directory, as automod's own sandbox; $CMD is split on spaces
+        // so a wrapper such as `proot-distro login ubuntu -- claude` works too.
+        // Gemini: write the no-tools settings first; the trust flag lets the sandbox settings load.
+        val prepare = if (name == "gemini")
+            "mkdir -p .gemini && printf '%s' '$GEMINI_SETTINGS' > .gemini/settings.json && export GEMINI_CLI_TRUST_WORKSPACE=true && "
+        else ""
+        val run = if (cmd == name)
+            "bin=\$(command -v $name) || { echo '$name: не установлен в Termux' >&2; exit 127; }; " +
+            "if head -n1 \"\$bin\" | grep -q node; then exec node \"\$bin\" \"\$@\"; else exec \"\$bin\" \"\$@\"; fi"
+        else "exec $cmd \"\$@\""
+        val script = "${TERMUX_ENV}mkdir -p ~/.telescript-sandbox && cd ~/.telescript-sandbox && ${prepare}$run"
+        return runRaw(listOf("-lc", script, name) + args, stdin, "TgAuto: $name", timeoutS)
+    }
+
+    /**
+     * Termux's own environment: without termux-exec in LD_PRELOAD a `#!/usr/bin/env node`
+     * shebang fails ("bad interpreter"), so npm CLIs are started as `node <script>`.
+     */
+    internal const val TERMUX_ENV = "export PATH=/data/data/com.termux/files/usr/bin:\$PATH; " +
+        "for l in libtermux-exec-ld-preload.so libtermux-exec.so; do " +
+        "[ -e /data/data/com.termux/files/usr/lib/\$l ] && { export LD_PRELOAD=/data/data/com.termux/files/usr/lib/\$l; break; }; done; "
+
+    /**
+     * Starts `bash <bashArgs>` in Termux through RUN_COMMAND and waits for the result. Blocking.
+     * [onId] receives the request id (for [abort]) before the wait begins.
+     */
+    internal fun runRaw(bashArgs: List<String>, stdin: String, label: String, timeoutS: Long = TIMEOUT_S,
+                        onId: (Int) -> Unit = {}): Result {
         if (!termuxInstalled()) return Result(127, "", Str.get(R.string.llm_no_termux))
         if (!hasPermission()) return Result(126, "", Str.get(R.string.llm_no_perm))
         val id = nextId.incrementAndGet()
         val future = CompletableFuture<Result>()
         pending[id] = future
         try {
-            val pref = if (name == "gemini") AppSettings.geminiCommand else AppSettings.termuxCommand
-            val cmd = pref.value.trim().ifEmpty { name }
-            // An empty working directory, as automod's own sandbox; $CMD is split on spaces
-            // so a wrapper such as `proot-distro login ubuntu -- claude` works too.
-            // Gemini: write the no-tools settings first; the trust flag lets the sandbox settings load.
-            val prepare = if (name == "gemini")
-                "mkdir -p .gemini && printf '%s' '$GEMINI_SETTINGS' > .gemini/settings.json && export GEMINI_CLI_TRUST_WORKSPACE=true && "
-            else ""
-            // Termux's own environment: without termux-exec in LD_PRELOAD a `#!/usr/bin/env node`
-            // shebang fails ("bad interpreter"), so npm CLIs are started as `node <script>`.
-            val pfx = "/data/data/com.termux/files/usr"
-            val env = "export PATH=$pfx/bin:\$PATH; " +
-                "for l in libtermux-exec-ld-preload.so libtermux-exec.so; do " +
-                "[ -e $pfx/lib/\$l ] && { export LD_PRELOAD=$pfx/lib/\$l; break; }; done; "
-            val run = if (cmd == name)
-                "bin=\$(command -v $name) || { echo '$name: не установлен в Termux' >&2; exit 127; }; " +
-                "if head -n1 \"\$bin\" | grep -q node; then exec node \"\$bin\" \"\$@\"; else exec \"\$bin\" \"\$@\"; fi"
-            else "exec $cmd \"\$@\""
-            val script = "${env}mkdir -p ~/.telescript-sandbox && cd ~/.telescript-sandbox && ${prepare}$run"
+            onId(id)
             val resultIntent = Intent(app, LlmResultReceiver::class.java).putExtra(LlmResultReceiver.EXTRA_ID, id)
             var flags = PendingIntent.FLAG_UPDATE_CURRENT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags = flags or PendingIntent.FLAG_MUTABLE
@@ -154,11 +171,11 @@ object LlmBridge {
             val intent = Intent("com.termux.RUN_COMMAND")
                 .setClassName(TERMUX, "com.termux.app.RunCommandService")
                 .putExtra("com.termux.RUN_COMMAND_PATH", BASH)
-                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", (listOf("-lc", script, name) + args).toTypedArray())
+                .putExtra("com.termux.RUN_COMMAND_ARGUMENTS", bashArgs.toTypedArray())
                 .putExtra("com.termux.RUN_COMMAND_STDIN", stdin)
                 .putExtra("com.termux.RUN_COMMAND_WORKDIR", TERMUX_HOME)
                 .putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
-                .putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "TgAuto: $name")
+                .putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", label)
                 .putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pi)
             try {
                 app.startService(intent)
@@ -178,13 +195,19 @@ object LlmBridge {
         }
     }
 
+    /** Stops waiting for request [id] (the Termux process is not killed here). */
+    internal fun abort(id: Int, code: Int = 130) {
+        pending[id]?.complete(Result(code, "", ""))
+    }
+
     /** Human-readable cause of a failed run, for the "Проверить" button. */
-    fun explain(r: Result): String {
+    fun explain(r: Result, name: String = ""): String {
         val e = r.stderr
         return when {
             r.exitCode == 0 && r.stdout.isNotBlank() -> ""
             "bad interpreter" in e -> Str.get(R.string.llm_bad_interp)
             "не установлен" in e || "not found" in e || r.exitCode == 127 -> Str.get(R.string.llm_not_found)
+            name == "codex" && ("login" in e.lowercase() || "auth" in e.lowercase() || "401" in e) -> Str.get(R.string.llm_need_login_codex)
             "login" in e.lowercase() || "auth" in e.lowercase() -> Str.get(R.string.llm_need_login)
             r.exitCode == 126 || r.exitCode == 125 || r.exitCode == 124 -> e.lineSequence().firstOrNull().orEmpty()
             r.exitCode == 0 -> Str.get(R.string.llm_empty)

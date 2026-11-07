@@ -59,6 +59,9 @@
     <string name="settings_claude_hint">Для proot Ubuntu: proot-distro login ubuntu -- claude</string>
     <string name="settings_gemini_acc">Gemini-аккаунт (Termux)</string>
     <string name="settings_gemini_hint">Обычно gemini. Настройки «без инструментов» пишутся в ~/.telescript-sandbox/.gemini</string>
+    <string name="settings_codex_acc">Codex-аккаунт (Termux)</string>
+    <string name="settings_codex_hint">Обычно codex. Запускается как codex exec --sandbox read-only, промпт через stdin; один раз войдите через codex login в Termux.</string>
+    <string name="settings_step_codex">Codex (по желанию, Nightly): установите и войдите (аккаунт ChatGPT):</string>
     <string name="settings_hide_steps">Скрыть инструкцию</string>
     <string name="settings_show_steps">Как настроить Termux</string>
     <string name="settings_api_key">API-ключ Anthropic (последний запас)</string>

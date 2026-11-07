@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sec_cli">CLI</string>
+    <string name="sec_providers">Providers</string>
+    <string name="sec_backend">AI backend</string>
+    <string name="cli_title">Console</string>
+    <string name="cli_hint">A small terminal that runs commands in Termux (the same bridge scripts use for claude and gemini). Output is shown when a command finishes.</string>
+    <string name="cli_termux_ok">Termux found</string>
+    <string name="cli_termux_no">Termux not found</string>
+    <string name="cli_perm_ok">RUN_COMMAND allowed</string>
+    <string name="cli_perm_no">No RUN_COMMAND permission</string>
+    <string name="cli_open">Open console</string>
+    <string name="console_title">tgauto console</string>
+    <string name="console_hello">Commands run in Termux. Output appears when a command finishes. Ctrl+C stops waiting and kills the process.</string>
+    <string name="console_copied">Copied</string>
+    <string name="console_copy">Copy (selected lines or all)</string>
+    <string name="console_clear">Clear</string>
+    <string name="console_close">Close</string>
+    <string name="console_run">Run</string>
+    <string name="console_running">running…</string>
+    <string name="console_q_claude">check claude</string>
+    <string name="console_crt">CRT effect</string>
+    <string name="console_q_gemini">check gemini</string>
+    <string name="console_q_codex">check codex</string>
+    <string name="console_q_node">node versions</string>
+    <string name="ai_title">Who answers for scripts</string>
+    <string name="ai_hint">Choose which AI backend scripts may use. The choice is enforced: unselected CLIs are hidden from scripts, and only selected providers and keys are passed.</string>
+    <string name="ai_m_auto">Auto</string>
+    <string name="ai_m_claude">Claude only</string>
+    <string name="ai_m_gemini">Gemini only</string>
+    <string name="ai_m_codex">Codex only</string>
+    <string name="ai_m_provider">Provider</string>
+    <string name="ai_order">Order (Auto)</string>
+    <string name="ai_k_claude">Claude CLI</string>
+    <string name="ai_k_gemini">Gemini CLI</string>
+    <string name="ai_k_codex">Codex CLI</string>
+    <string name="ai_k_providers">Providers</string>
+    <string name="ai_k_api">Anthropic API</string>
+    <string name="ai_now">Now: %1$s</string>
+    <string name="ai_none">nothing selected</string>
+    <string name="ai_enforced">Which backends are available is enforced by the app. The order inside Auto is passed to scripts (TELESCRIPT_LLM_BACKEND) and applies where the script honours it; a script\'s own config \"backend\" still takes priority.</string>
+</resources>

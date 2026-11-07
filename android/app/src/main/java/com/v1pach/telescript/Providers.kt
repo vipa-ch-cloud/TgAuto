@@ -80,9 +80,7 @@ object Providers {
         f.setReadable(true, true); f.setWritable(true, true)
     }
 
-    @Synchronized
-    private fun save() {
-        val list = _list.value
+    private fun toJson(list: List<Provider>, order: List<String>): JSONObject {
         val root = JSONObject()
         root.put("providers", JSONArray(list.map { p ->
             JSONObject().put("id", p.id).put("kind", p.kind).put("title", p.title)
@@ -90,13 +88,37 @@ object Providers {
                 .put("headers", JSONObject(p.headers)).put("timeout", p.timeout)
                 .also { o -> if (p.extraBody.isNotBlank()) runCatching { o.put("extra_body", JSONObject(p.extraBody)) } }
         }))
-        root.put("order", JSONArray(list.map { it.id }))
-        val tmp = File(file.parentFile, "llm_providers.json.tmp")
+        root.put("order", JSONArray(order))
+        return root
+    }
+
+    /** Writes [root] to [target] without ever leaving the key world-readable. */
+    private fun writePrivate(target: File, root: JSONObject) {
+        val tmp = File(target.parentFile, target.name + ".tmp")
         tmp.writeText("")           // create empty, restrict, then write: the key is never world-readable
         restrict(tmp)
         tmp.writeText(root.toString())
-        tmp.renameTo(file)
-        restrict(file)
+        tmp.renameTo(target)
+        restrict(target)
+    }
+
+    @Synchronized
+    private fun save() {
+        val list = _list.value
+        writePrivate(file, toJson(list, list.map { it.id }))
+    }
+
+    /**
+     * Same format as the main file, but "order" is [ids] (ids not in the list are dropped).
+     * Nightly's AI backend selection hands this file to scripts instead of the main one.
+     */
+    @Synchronized
+    internal fun writeEffective(ids: List<String>): String {
+        val list = _list.value
+        val known = list.map { it.id }.toSet()
+        val target = File(file.parentFile, "llm_providers.effective.json")
+        writePrivate(target, toJson(list, ids.filter { it in known }))
+        return target.absolutePath
     }
 
     class Result(val ok: Boolean, val text: String)

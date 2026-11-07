@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sec_cli">CLI</string>
+    <string name="sec_providers">Провайдеры</string>
+    <string name="sec_backend">ИИ-бэкенд</string>
+    <string name="cli_title">Консоль</string>
+    <string name="cli_hint">Небольшой терминал: команды выполняются в Termux (тот же мост, что у скриптов для claude и gemini). Вывод показывается после завершения команды.</string>
+    <string name="cli_termux_ok">Termux найден</string>
+    <string name="cli_termux_no">Termux не найден</string>
+    <string name="cli_perm_ok">RUN_COMMAND разрешён</string>
+    <string name="cli_perm_no">Нет разрешения RUN_COMMAND</string>
+    <string name="cli_open">Открыть консоль</string>
+    <string name="console_title">консоль tgauto</string>
+    <string name="console_hello">Команды выполняются в Termux. Вывод появляется по завершении команды. Ctrl+C прекращает ожидание и убивает процесс.</string>
+    <string name="console_copied">Скопировано</string>
+    <string name="console_copy">Копировать (выбранные строки или всё)</string>
+    <string name="console_clear">Очистить</string>
+    <string name="console_close">Закрыть</string>
+    <string name="console_run">Выполнить</string>
+    <string name="console_running">выполняется…</string>
+    <string name="console_q_claude">проверить claude</string>
+    <string name="console_crt">CRT-эффект</string>
+    <string name="console_q_gemini">проверить gemini</string>
+    <string name="console_q_codex">проверить codex</string>
+    <string name="console_q_node">версии node</string>
+    <string name="ai_title">Кто отвечает скриптам</string>
+    <string name="ai_hint">Выберите, какой ИИ-бэкенд могут использовать скрипты. Выбор применяется принудительно: невыбранные CLI скрыты от скриптов, передаются только выбранные провайдеры и ключи.</string>
+    <string name="ai_m_auto">Авто</string>
+    <string name="ai_m_claude">Только Claude</string>
+    <string name="ai_m_gemini">Только Gemini</string>
+    <string name="ai_m_codex">Только Codex</string>
+    <string name="ai_m_provider">Провайдер</string>
+    <string name="ai_order">Порядок (Авто)</string>
+    <string name="ai_k_claude">Claude CLI</string>
+    <string name="ai_k_gemini">Gemini CLI</string>
+    <string name="ai_k_codex">Codex CLI</string>
+    <string name="ai_k_providers">Провайдеры</string>
+    <string name="ai_k_api">Anthropic API</string>
+    <string name="ai_now">Сейчас: %1$s</string>
+    <string name="ai_none">ничего не выбрано</string>
+    <string name="ai_enforced">Набор доступных бэкендов обеспечивает приложение. Порядок внутри Авто передаётся скриптам (TELESCRIPT_LLM_BACKEND) и работает там, где скрипт его учитывает; собственный «backend» в конфиге скрипта по-прежнему приоритетнее.</string>
+</resources>
