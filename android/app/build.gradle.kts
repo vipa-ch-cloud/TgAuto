@@ -12,15 +12,14 @@ android {
         applicationId = "com.v1pach.telescript"
         minSdk = 26
         targetSdk = 37
-        versionCode = 22
-        versionName = "1.9.2"
+        versionCode = 23
+        versionName = "1.9.3-term"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
 
     // Terminal + AI CLI live in src/terminal. 1.9.2: nightly only. For 1.9.3 flip this to true (one edit).
-    val terminalInStable = false
     flavorDimensions += "channel"
     productFlavors {
         create("stable") { dimension = "channel" }
@@ -47,12 +46,15 @@ android {
         buildConfig = true
     }
     sourceSets {
-        val flavors = if (terminalInStable) listOf("nightly", "stable") else listOf("nightly")
-        for (f in flavors) getByName(f).apply {
+        // Terminal + AI-CLI in both flavors since 1.9.3. libtermux.so (tools/pty) is built with 16 KB page
+        // alignment; the userland (Termux packages, tools/termux_userland) is generated into build/userland.
+        getByName("main").apply {
             java.srcDir("src/terminal/java")
             kotlin.srcDir("src/terminal/java")
             res.srcDir("src/terminal/res")
-            manifest.srcFile("src/terminal/AndroidManifest.xml")
+            jniLibs.srcDir("src/terminal/jniLibs")
+            jniLibs.srcDir(layout.buildDirectory.dir("userland/jniLibs"))
+            assets.srcDir(layout.buildDirectory.dir("userland/assets"))
         }
     }
     packaging {
@@ -60,6 +62,8 @@ android {
         // nativeLibraryDir: the only app location Android lets us execute files from.
         jniLibs.useLegacyPackaging = true
         jniLibs.keepDebugSymbols += "**/libclaude.so"
+        // our 16 KB-aligned libtermux.so replaces the 4 KB-aligned one inside the Termux AAR
+        jniLibs.pickFirsts += "**/libtermux.so"
     }
 }
 
@@ -92,8 +96,19 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.zxing.core)
     // Terminal emulator + view from termux-app (Apache-2.0 parts, see docs/TERMINAL.md). Native libtermux.so does the PTY.
-    // nightly only in 1.9.2 (terminalInStable above; for 1.9.3 use implementation(...) here)
-    "nightlyImplementation"(libs.termux.terminal.emulator)
-    "nightlyImplementation"(libs.termux.terminal.view)
+    implementation(libs.termux.terminal.emulator)
+    implementation(libs.termux.terminal.view)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
+// Embedded Termux userland (bash, busybox, git, curl, python, node): downloaded from the official Termux
+// repository, patched with patchelf and packed as jniLibs + an asset. Skip with -PnoUserland.
+val fetchUserland = tasks.register<Exec>("fetchUserland") {
+    val script = file("../../tools/termux_userland/build_userland.py")
+    val out = layout.buildDirectory.dir("userland").get().asFile
+    inputs.file(script)
+    outputs.dir(out)
+    commandLine("python3", "-I", script.absolutePath, out.absolutePath)
+    onlyIf { !project.hasProperty("noUserland") }
+}
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(fetchUserland) }
