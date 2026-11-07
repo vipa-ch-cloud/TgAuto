@@ -207,12 +207,6 @@ object TerminalHost {
     }
 }
 
-/** TerminalView whose layout/draw failures (PTY/JNI start in onSizeChanged) are reported instead of crashing the app. */
-class SafeTerminalView(context: Context) : TerminalView(context, null) {
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        try { super.onSizeChanged(w, h, oldw, oldh) } catch (t: Throwable) { TerminalHost.error = "pty: $t" }
-    }
-    override fun onDraw(canvas: android.graphics.Canvas) {
-        try { super.onDraw(canvas) } catch (t: Throwable) { TerminalHost.error = "draw: $t" }
-    }
-}
+/** TerminalView is final, so the native library is checked up front: a failed JNI load must not reach onSizeChanged. */
+fun nativePtyOk(): Boolean = runCatching { System.loadLibrary("termux"); true }
+    .onFailure { TerminalHost.error = "libtermux: $it" }.getOrDefault(false)

@@ -169,13 +169,13 @@ fun ShellPanel(look: ConsoleLook) {
                 modifier = Modifier.padding(6.dp).size(22.dp).clickable { TerminalHost.newTab() })
         }
         TerminalHost.error?.let { Text(it, color = look.err, fontFamily = MONO, fontSize = 12.sp, modifier = Modifier.padding(8.dp)) }
-        if (tab != null) {
+        if (tab != null && nativePtyOk()) {
             val size = TerminalPrefs.fontSize.value
             key(tab.id) {
                 AndroidView(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     factory = { ctx ->
-                        SafeTerminalView(ctx).apply {
+                        TerminalView(ctx, null).apply {
                             setBackgroundColor(look.bg.toArgb())
                             setTerminalViewClient(TerminalHost.viewClient)
                             // setTextSize creates the TerminalRenderer; setTypeface needs it (NPE in 1.9.3 when called first).
