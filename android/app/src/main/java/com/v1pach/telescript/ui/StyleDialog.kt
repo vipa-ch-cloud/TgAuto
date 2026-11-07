@@ -38,6 +38,10 @@ private suspend fun runOnce(script: ScriptInfo, arg: String): String? {
     return if (st.status == RunStatus.ERROR) st.message.ifBlank { "error" } else null
 }
 
+/** Old autoresponder (<1.2.0) answers unknown commands with its usage line. */
+private fun isOldScriptError(e: String?): Boolean =
+    e != null && Regex("использование|usage|unknown command|invalid choice|неизвестн", RegexOption.IGNORE_CASE).containsMatchIn(e)
+
 private fun readJson(file: File): String? = runCatching { file.takeIf { it.isFile }?.readText() }.getOrNull()
 
 /** Choose chats -> the script reads the user's messages and has the model describe the style -> edit -> save to style.json. */
@@ -49,6 +53,8 @@ fun StyleDialog(script: ScriptInfo, onClose: () -> Unit) {
     var chats by remember { mutableStateOf<List<StyleChat>>(emptyList()) }
     val picked = remember { mutableStateListOf<Long>() }
     var error by remember { mutableStateOf("") }
+    var oldScript by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     var draft by remember { mutableStateOf<JSONObject?>(null) }
     var text by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(false) }
@@ -59,10 +65,13 @@ fun StyleDialog(script: ScriptInfo, onClose: () -> Unit) {
     val failedFmt = stringResource(R.string.style_failed, "%s")
     val scope = rememberCoroutineScope()
 
-    fun fail(e: String) { error = failedFmt.replace("%s", e) }
+    fun fail(e: String) {
+        oldScript = isOldScriptError(e) || e == oldText
+        error = if (oldScript) oldText else failedFmt.replace("%s", e)
+    }
 
     fun loadChats() {
-        error = ""; busy = loadingText
+        error = ""; oldScript = false; busy = loadingText
         scope.launch {
             val e = withContext(Dispatchers.IO) {
                 File(script.dataDir, "style_chats.json").delete()
@@ -79,7 +88,7 @@ fun StyleDialog(script: ScriptInfo, onClose: () -> Unit) {
     }
 
     fun analyze() {
-        error = ""; busy = analyzingText; draft = null; saved = false
+        error = ""; oldScript = false; busy = analyzingText; draft = null; saved = false
         scope.launch {
             val e = withContext(Dispatchers.IO) {
                 File(script.dataDir, "style_draft.json").delete()
@@ -118,6 +127,9 @@ fun StyleDialog(script: ScriptInfo, onClose: () -> Unit) {
                     if (running) Hint(stringResource(R.string.style_running), MaterialTheme.colorScheme.error)
                     if (hasSaved) Hint(stringResource(R.string.style_has_saved))
                     if (error.isNotEmpty()) Hint(error, MaterialTheme.colorScheme.error)
+                    if (oldScript) OutlinedButton({
+                        context.startActivity(android.content.Intent(context, com.v1pach.telescript.store.StoreActivity::class.java))
+                    }) { Text(stringResource(R.string.store_title)) }
                     if (busy.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp); Text(busy)
                     }
