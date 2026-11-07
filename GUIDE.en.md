@@ -111,6 +111,32 @@ If you do not need Claude and Gemini or they are unavailable, scripts can use an
 - Privacy: keys are stored only in the app's private folder on the phone (a file with 600 permissions). They are not written to logs, not shown after saving and do not end up in the scripts folder. The script receives only the file path in `TELESCRIPT_LLM_PROVIDERS_FILE`; the file is read by the script you started.
 - Codex (ChatGPT account) is not supported yet: the official login in Termux fails for many (github.com/openai/codex/issues/6632), there is no proven method.
 
+## 14. Console and AI backend selection (TgAuto Nightly build only)
+The stable build does not have these sections.
+- "Settings" -> "CLI" (top) -> "Open console": a full-screen terminal. Commands go to Termux over the same bridge the scripts use, so Termux and the RUN_COMMAND permission are required (section 4).
+- Quick buttons: "check claude", "check gemini", "node versions". There is history (up and down arrows), Ctrl+C and copying: tapping a line selects it, the copy button takes the selection or everything.
+- ANSI (SGR) colors and newlines are supported. Limitations: output appears only after the command finishes (background RUN_COMMAND does not stream), and interactive programs (vim, password prompts) do not work. Ctrl+C stops waiting and signals the process.
+- "Settings" -> "AI backend": who answers for scripts. "Auto" (Claude, then Gemini, then providers, then API; each item has a switch and order arrows), "Claude only", "Gemini only" or one specific provider.
+- What the choice really does: unselected claude and gemini are hidden from scripts, scripts get a providers file with only the selected ones, and the Anthropic API key is passed only if API is selected. The order inside "Auto" is passed in `TELESCRIPT_LLM_BACKEND` and applies where a script honours it. A script's own `backend` config still takes priority. The `TELESCRIPT_LLM_PROVIDERS_FILE` contract is unchanged.
+- After upgrading from an older version the choice is taken from the old order setting until you change something.
+- Console effect: the "CRT effect" button in the console title bar (on by default, remembered) adds a rolling refresh band, scanlines, a vignette and a soft glow.
+- Codex (Nightly): the "Codex" switch in "AI backend" adds it to Auto, or pick "Only Codex". It runs through Termux like Claude; log in with `codex login` there. Not verified on a real device.
+- Proxy secret: for MTProxy, hex (optionally dd/ee) or base64 is accepted; spaces are stripped and a wrong secret shows an error instead of a Python message.
+- Scripts (automod, auto-responder): Telegram reconnect spam in the log collapses into "no connection / restored" lines.
+
+## 15. OTA updates and the script store (1.9)
+
+Settings > Updates (OTA): install a signed `.tgadyn` from a file, check GitHub releases, auto-check (on by default, notification only), auto-apply (off by default), rollback, reset to built-in. OTA changes the Python layer, config schemas, strings and docs; the Kotlin UI, manifest and native libs need a new APK. Two failed starts roll back automatically.
+
+Scripts tab > Store: catalog from vipa-ch-cloud/TgAutoS with search, tags, details, install, update, rollback and delete. Script config and data are never overwritten. Script auto-update is off by default and covers only verified scripts that add no new network hosts. A `.tgascript` can be installed from a file; an unverified or unsigned one shows a warning (permissions, hosts, sha256, author) and needs a checkbox. There is no upload server: submit your script through a GitHub issue, the owner reviews it and adds the Verified label. Details: docs/OTA.md.
+
+### Community sources and cards (1.9.1)
+The store shows cards with colour, icon, version, author, date and a repository link. "Sources" lets you add a
+third-party catalog (index.json URL, https) and an optional Ed25519 key (64 hex). Foreign sources never get
+verified/official; without a key they are unsigned, with a warning. Same sha256, permission and install-confirm
+checks. Updates from foreign sources are manual only.
+OTA fetches only .tgadyn from the releases/latest of the TgAuto repo; the app does not download or install APKs.
+
 ## Troubleshooting
 - `CANNOT LINK EXECUTABLE "node"`: run `pkg upgrade -y`, then `pkg install -y libc++ nodejs`.
 - "Check" reports `bad interpreter: No such file or directory`: in Termux run `pkg install -y libc++ nodejs` and restart Termux. TgAuto already starts the CLI through `node`, but nothing works without node.

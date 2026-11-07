@@ -17,6 +17,9 @@
     <string name="account_fake_tls_bad">Secret starts with \"ee\" (fake-TLS): Telethon does not support such proxies. Use a secret with the \"dd\" prefix or a plain one, or SOCKS5.</string>
     <string name="account_fake_tls_ok">Plain and \"dd\" secrets are supported. Telethon does not support fake-TLS (\"ee…\").</string>
     <string name="account_proxy_hint">The proxy is used both for signing in and for running scripts (proxy.json / TELESCRIPT_PROXY).</string>
+    <string name="account_secret_empty">Enter the MTProxy secret.</string>
+    <string name="account_secret_hex_odd">Secret must be hex with an even number of characters (or urlsafe base64).</string>
+    <string name="account_secret_bad">Invalid secret: use hex with an even number of characters (optionally with a dd prefix) or urlsafe base64.</string>
     <string name="account_checking">Checking session…</string>
     <string name="account_signed_in_pill">signed in</string>
     <string name="account_session_saved">Session saved. Scripts run as this account.</string>

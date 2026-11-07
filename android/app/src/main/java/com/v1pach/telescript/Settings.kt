@@ -62,6 +62,7 @@ object AppSettings {
     val llmOrder = Pref("llm_order", "both")
     val termuxCommand = Pref("termux_command", "claude")
     val geminiCommand = Pref("gemini_command", "gemini")
+    val codexCommand = Pref("codex_command", "codex")
     val anthropicKey = Pref("anthropic_key", "")
     val model = Pref("model", "")
 
@@ -69,6 +70,16 @@ object AppSettings {
     val themeMode = Pref("theme_mode", "system") // system | light | dark
     val dynamicColor = Pref("dynamic_color", true)
     val palette = Pref("palette", "indigo")
+
+    // Updates (OTA) and script store
+    val otaAutoCheck = Pref("ota_auto_check", true)
+    val otaAutoApply = Pref("ota_auto_apply", false)
+    val otaLastCheck = Pref("ota_last_check", "0")
+    val otaNotified = Pref("ota_notified", "")
+    val storeAutoUpdate = Pref("store_auto_update", false)
+    val storeLastCheck = Pref("store_last_check", "0")
+    /** Community catalog sources added by the user (JSON array; the official one is built in). */
+    val storeSources = Pref("store_sources", "[]")
 
     // Logs
     val logDebug = Pref("log_debug", false)
@@ -82,8 +93,27 @@ object AppSettings {
         val port = proxyPort.value.trim().toIntOrNull()
         if (type == "none" || proxyHost.value.isBlank() || port == null) return ""
         val json = JSONObject().put("type", type).put("host", proxyHost.value.trim()).put("port", port)
-        if (type == "mtproxy") json.put("secret", proxySecret.value.trim())
+        if (type == "mtproxy") json.put("secret", normalizeProxySecret(proxySecret.value))
         return json.toString()
+    }
+
+    /** Removes all whitespace (pasted secrets often carry spaces or line breaks). */
+    fun normalizeProxySecret(raw: String): String = raw.filterNot(Char::isWhitespace)
+
+    /**
+     * Validates an MTProxy secret the way Telethon reads it: hex (even length, optional dd/ee prefix)
+     * or urlsafe base64. Returns a string resource id with the error, or null when the secret is fine.
+     */
+    fun proxySecretError(raw: String): Int? {
+        val s = normalizeProxySecret(raw)
+        if (s.isEmpty()) return R.string.account_secret_empty
+        if (s.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) {
+            return if (s.length % 2 == 0) null else R.string.account_secret_hex_odd
+        }
+        val body = s.trimEnd('=')
+        val b64 = body.isNotEmpty() && s.length - body.length <= 2 &&
+            body.all { it.isLetterOrDigit() && it.code < 128 || it == '-' || it == '_' || it == '+' || it == '/' }
+        return if (b64 && body.length % 4 != 1) null else R.string.account_secret_bad
     }
 
     fun hasApiCredentials(): Boolean =

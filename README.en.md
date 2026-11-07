@@ -14,7 +14,7 @@ The app runs your Python Telegram scripts right on the phone and can connect LLM
 - Telegram login by phone number (QR as a fallback); the session is shared by all scripts.
 - The scripts folder is picked via SAF; scripts are mirrored into the app's internal storage.
 - Runtime pip: install Python libraries on the phone for each script.
-- LLMs for scripts: Claude and Gemini accounts through Termux (the real CLIs, without tools), Codex once a working method appears, and any OpenAI-compatible providers (DeepSeek, OpenAI, your own API). The providers section is currently Nightly-only. Keys are stored only on the phone.
+- LLMs for scripts: Claude and Gemini accounts through Termux (the real CLIs, without tools), Codex (Nightly, via Termux, experimental), and any OpenAI-compatible providers (DeepSeek, OpenAI, your own API). The providers section is currently Nightly-only. Keys are stored only on the phone.
 - "Config" form: a script ships a `config.schema.json` next to it and the app shows its settings as a form.
 - Script logs in the "Logs" tab.
 

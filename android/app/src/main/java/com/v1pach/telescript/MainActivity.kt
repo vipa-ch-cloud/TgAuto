@@ -61,13 +61,22 @@ class MainActivity : ComponentActivity() {
     private val startupPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
 
+    private var wrapped: android.content.res.Resources? = null
+    private var wrappedFor = ""
+    override fun getResources(): android.content.res.Resources {
+        val base = super.getResources()
+        val key = base.configuration.locales.toLanguageTags()
+        if (wrapped == null || wrappedFor != key) { wrapped = com.v1pach.telescript.ota.OtaManager.wrapResources(base); wrappedFor = key }
+        return wrapped!!
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val wanted = buildList {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
             // Claude account mode needs to run Claude Code in Termux.
-            if (AppSettings.llmOrder.value != "api" && LlmBridge.termuxInstalled() && !LlmBridge.hasPermission())
+            if (FlavorHooks.cliOrder(AppSettings.llmOrder.value) != "api" && LlmBridge.termuxInstalled() && !LlmBridge.hasPermission())
                 add(LlmBridge.PERMISSION)
         }
         if (wanted.isNotEmpty()) startupPermissions.launch(wanted.toTypedArray())
