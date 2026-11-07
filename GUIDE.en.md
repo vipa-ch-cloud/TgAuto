@@ -143,6 +143,18 @@ OTA fetches only .tgadyn from the releases/latest of the TgAuto repo.
 - Community keys: Settings > Updates > "Trusted keys". Add an Ed25519 public key (hex or base64) with a name; the sha256 fingerprint is shown and the key can be deleted. A package signed by such a key is installed only manually after an explicit warning (author, fingerprint) and is never treated as official. The official key cannot be removed or replaced. For your own packages see tools/gen_ota_key.py and tools/make_ota.py --key in docs/OTA.md.
 - CRT effect (nightly): a static RGB-subpixel grid with scanlines, soft glow on light text, light chromatic fringe and a vignette; no rolling band and no outlines. Toggle in the console header.
 
+## 16. Terminal and AI CLI (1.9.2)
+
+Settings has a "Terminal and AI CLI" card. The terminal is off by default; enabling it needs a confirmation and shows a warning.
+
+- **Terminal.** A real PTY (the Termux emulator), several tabs, ANSI colours, scrollback, an Esc/Tab/Ctrl/Alt/arrows/Home/End/PgUp/PgDn row, paste and copy of the screen. Shell: `/system/bin/sh` + toybox, working directory is the app's `home/`, the app's `bin/` is in `PATH`, variables `TGA_ROOT`, `TGA_SCRIPTS`, `TGA_CONFIG`.
+- **Honest limits.** The app targets Android 17 (targetSdk 37): executing downloaded programs from app data is forbidden (W^X). So there is no apt, node, pip or Python interpreter inside; only the system commands. Chaquopy Python runs inside the app process and is not exposed to the shell.
+- **AI CLI.** The "AI CLI" tab installs, updates and removes claude (`@anthropic-ai/claude-code`), codex (`@openai/codex`) and gemini (`@google/gemini-cli`) in **Termux** (nodejs via `pkg`, then `npm install -g`). You need Termux from F-Droid, the "Run commands in Termux" permission and `allow-external-apps=true`. Script output arrives when it finishes, not line by line. Path and version are verified afterwards. "Login" opens a real Termux session: sign in there; TgAuto never sees or stores tokens. An optional HTTP proxy applies to install scripts only (the Telegram proxy does not work for npm).
+- **AI backend.** Installed claude and codex are picked up by the existing bridge (Termux RUN_COMMAND); Nightly has an "Enable Codex in AI backend" button.
+- **Security.** The terminal opens only from your tap in Settings: the activity is not exported and reads no command from an intent; scripts, store packages, Telegram and OTA files cannot start it. Optionally the device credential (PIN, pattern, fingerprint) is required on entry and after a minute in the background. The screen is excluded from screenshots. Install logs are scrubbed of URL passwords and tokens.
+
+Details: `docs/TERMINAL.md`.
+
 ## Troubleshooting
 - `CANNOT LINK EXECUTABLE "node"`: run `pkg upgrade -y`, then `pkg install -y libc++ nodejs`.
 - "Check" reports `bad interpreter: No such file or directory`: in Termux run `pkg install -y libc++ nodejs` and restart Termux. TgAuto already starts the CLI through `node`, but nothing works without node.

@@ -35,6 +35,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Built-in terminal: not exported, no intent filters, never reads commands from an intent. -->
+        <activity
+            android:name=".terminal.TerminalActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:excludeFromRecents="true" />
+
         <activity
             android:name=".store.StoreActivity"
             android:exported="false" />
