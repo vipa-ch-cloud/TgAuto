@@ -55,6 +55,8 @@ fun SettingsTab() {
 
         LlmCard()
 
+        com.v1pach.telescript.terminal.TerminalCard()
+
         FlavorLlmSections()
 
         ConfigEditorCard()

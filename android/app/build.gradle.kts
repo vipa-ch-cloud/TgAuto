@@ -80,5 +80,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.zxing.core)
+    // Terminal emulator + view from termux-app (Apache-2.0 parts, see docs/TERMINAL.md). Native libtermux.so does the PTY.
+    implementation(libs.termux.terminal.emulator)
+    implementation(libs.termux.terminal.view)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
