@@ -23,7 +23,6 @@ fun TerminalCard() {
     val secure = TerminalActivity.deviceSecure(context)
     AppSectionCard {
         SectionHeader(Icons.Default.Terminal, stringResource(R.string.term_title))
-        Hint(stringResource(R.string.term_warning), MaterialTheme.colorScheme.error)
         SwitchRow(stringResource(R.string.term_enable), null, enabled) { if (it) ask = true else TerminalPrefs.enabled.set(false) }
         if (enabled) {
             SwitchRow(stringResource(R.string.term_lock), stringResource(if (secure) R.string.term_lock_hint else R.string.term_lock_nosecure), lock, secure) { TerminalPrefs.lock.set(it) }

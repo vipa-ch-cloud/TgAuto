@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="term_title">Терминал и ИИ-CLI</string>
-    <string name="term_warning">Внимание: терминал выполняет любые команды с правами приложения и видит его данные (скрипты, ключи, сессию). Включайте только для себя. Ничего не запускается автоматически: ни скриптами, ни пакетами из магазина, ни из Telegram, ни OTA-файлами.</string>
     <string name="term_enable">Включить встроенный терминал</string>
     <string name="term_lock">Запрашивать блокировку экрана</string>
     <string name="term_lock_hint">PIN, графический ключ или отпечаток при входе и после 1 минуты в фоне</string>

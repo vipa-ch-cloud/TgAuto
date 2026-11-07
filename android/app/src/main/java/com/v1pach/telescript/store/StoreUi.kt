@@ -35,13 +35,13 @@ private fun sourceLabel(id: String): String = when (id) {
 }
 
 @Composable
-private fun entryBadges(e: StoreEntry, inst: InstalledScript?, fg: androidx.compose.ui.graphics.Color) {
-    if (e.verified) CardBadge(stringResource(if (e.official) R.string.store_official else R.string.store_verified), Icons.Default.Verified, fg)
-    else CardBadge(stringResource(R.string.store_unverified), Icons.Default.Warning, fg)
-    if (e.sourceId != StoreMeta.OFFICIAL_ID) CardBadge(sourceLabel(e.sourceId), Icons.Default.Groups, fg)
+private fun entryBadges(e: StoreEntry, inst: InstalledScript?) {
+    if (e.verified) StatusPill(stringResource(if (e.official) R.string.store_official else R.string.store_verified), MaterialTheme.colorScheme.primary)
+    else StatusPill(stringResource(R.string.store_unverified), MaterialTheme.colorScheme.error)
+    if (e.sourceId != StoreMeta.OFFICIAL_ID) StatusPill(sourceLabel(e.sourceId), MaterialTheme.colorScheme.secondary)
     if (inst != null) {
-        if (OtaCore.vcmp(e.version, inst.version) > 0) CardBadge(stringResource(R.string.store_update_avail, inst.version), Icons.Default.Update, fg)
-        else CardBadge(stringResource(R.string.store_installed_ver, inst.version), Icons.Default.CheckCircle, fg)
+        if (OtaCore.vcmp(e.version, inst.version) > 0) StatusPill(stringResource(R.string.store_update_avail, inst.version), MaterialTheme.colorScheme.tertiary)
+        else StatusPill(stringResource(R.string.store_installed_ver, inst.version), MaterialTheme.colorScheme.secondary)
     }
 }
 
@@ -161,7 +161,7 @@ fun StoreScreen(onBack: () -> Unit) {
         val inst = installed[sel.id]?.takeIf { it.sourceId == sel.sourceId }
         ScrollColumn {
             TabHeader(sel.title(ru))
-            StoreCard(sel.title(ru), sel.desc(ru), sel.meta, sel.version, sel.author) { fg -> entryBadges(sel, inst, fg) }
+            StoreCard(sel.title(ru), sel.desc(ru), sel.meta, sel.version, sel.author) { entryBadges(sel, inst) }
             AppSectionCard {
                 Hint("id: ${sel.id}  ·  " + stringResource(R.string.store_source) + ": " + sourceLabel(sel.sourceId))
                 if (!sel.verified) Hint(stringResource(if (sourceOf(sel.sourceId)?.hasKey == true) R.string.store_src_note_key else R.string.store_src_note_nokey),
@@ -215,7 +215,7 @@ fun StoreScreen(onBack: () -> Unit) {
         if (!loading && error.isEmpty() && shown.isEmpty()) Hint(stringResource(R.string.store_empty))
         shown.forEach { e ->
             val inst = installed[e.id]?.takeIf { it.sourceId == e.sourceId }
-            StoreCard(e.title(ru), e.desc(ru), e.meta, e.version, e.author, Modifier.clickable { selected = e }) { fg -> entryBadges(e, inst, fg) }
+            StoreCard(e.title(ru), e.desc(ru), e.meta, e.version, e.author, Modifier.clickable { selected = e }) { entryBadges(e, inst) }
         }
         if (message.isNotBlank()) Hint(message, MaterialTheme.colorScheme.error)
         BigButton(stringResource(R.string.store_sources), Icons.Default.Dns, onClick = { showSources = true })

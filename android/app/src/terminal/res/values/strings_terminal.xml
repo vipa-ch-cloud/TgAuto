@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="term_title">Terminal and AI CLI</string>
-    <string name="term_warning">Warning: the terminal runs arbitrary commands with the app\'s rights and can read its data (scripts, keys, session). Enable it only for yourself. Nothing is started automatically: not by scripts, store packages, Telegram or OTA files.</string>
     <string name="term_enable">Enable built-in terminal</string>
     <string name="term_lock">Ask for screen lock</string>
     <string name="term_lock_hint">PIN, pattern or fingerprint when opening and after 1 minute in the background</string>
