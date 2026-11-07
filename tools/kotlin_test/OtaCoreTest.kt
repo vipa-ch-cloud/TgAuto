@@ -1,4 +1,5 @@
 import com.v1pach.telescript.ota.*
+import com.v1pach.telescript.ui.CrtPalette
 import com.v1pach.telescript.ota.OtaException
 import com.v1pach.telescript.store.*
 import org.json.JSONArray
@@ -97,6 +98,24 @@ fun main(args: Array<String>) {
     fun idc(pk: String?, cn: Long, ci: Set<String>, cnw: Set<String>) = code { ApkCore.checkIdentity("a.b", pk, 21, cn, ci, cnw) }
     check("identity ok", idc("a.b", 22, setOf("aa"), setOf("aa")) == "ok")
     check("identity wrong package/downgrade/cert", idc("a.b.nightly", 22, setOf("aa"), setOf("aa")) == "apk_package" && idc("a.b", 21, setOf("aa"), setOf("aa")) == "apk_not_newer" && idc("a.b", 22, setOf("aa"), setOf("bb")) == "apk_cert")
+    // --- CRT palette ---
+    val seeds = listOf(0xFF6750A4.toInt(), 0xFF00BCD4.toInt(), 0xFFFFEB3B.toInt(), 0xFF4CAF50.toInt(), 0xFFFF0000.toInt(), 0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0xFF8D6E63.toInt())
+    var palOk = true; var screenDark = true; var hier = true; var errWarn = true
+    for (s in seeds) for (dk in listOf(true, false)) {
+        val p = CrtPalette.from(s, 0xFFB3261E.toInt(), dk)
+        for (fg in listOf(p.text, p.dim, p.prompt, p.error, p.warning)) for (bg in listOf(p.screen, p.panel))
+            if (CrtPalette.contrast(fg, bg) < 4.5) palOk = false
+        if (CrtPalette.luminance(p.screen) > 0.02) screenDark = false
+        if (!(CrtPalette.luminance(p.screen) < CrtPalette.luminance(p.panel) && CrtPalette.luminance(p.panel) < CrtPalette.luminance(p.text))) hier = false
+        val eh = CrtPalette.toHsl(p.error).first; val wh = CrtPalette.toHsl(p.warning).first
+        if (!(eh < 15f || eh > 335f) || kotlin.math.abs(wh - 40f) > 5f || p.error == p.warning || p.error == p.text) errWarn = false
+    }
+    check("crt contrast >= 4.5 for all seeds/themes", palOk)
+    check("crt screen clearly darker than panels, text lightest", screenDark && hier)
+    check("crt error reddish, warning amber, distinct", errWarn)
+    val pa = CrtPalette.from(0xFF3F51B5.toInt(), 0xFFB3261E.toInt(), true); val pb = CrtPalette.from(0xFFE91E63.toInt(), 0xFFB3261E.toInt(), true)
+    check("crt follows accent", pa.screen != pb.screen && pa.glow != pb.glow && pa.scanline != pb.scanline && (pa.vignette ushr 24) > 0)
+    check("crt hsl roundtrip", CrtPalette.toHsl(CrtPalette.hsl(210f, 0.5f, 0.4f)).let { kotlin.math.abs(it.first - 210f) < 1.5f && kotlin.math.abs(it.second - 0.5f) < 0.02f })
     args.getOrNull(1)?.let { File(it) }?.takeIf { it.exists() }?.let { f ->
         val e = StoreMeta.parseEntries(JSONObject(f.readText()).getJSONArray("scripts"), off)
         check("real catalog", e.isNotEmpty() && e.all { it.meta.color != null && it.meta.icon in StoreMeta.ICONS && it.meta.title(true, "").isNotEmpty() })

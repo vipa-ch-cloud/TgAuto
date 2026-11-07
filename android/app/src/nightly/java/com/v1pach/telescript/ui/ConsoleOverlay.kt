@@ -53,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -76,9 +77,22 @@ private class TermColors(
 }
 
 @Composable
-private fun termColors(): TermColors {
+private fun termColors(crt: Boolean): TermColors {
     val c = MaterialTheme.colorScheme
     val dark = c.background.luminance() < 0.5f
+    if (crt) {
+        val p = CrtPalette.from(c.primary.toArgb(), c.error.toArgb(), dark)
+        val h = CrtPalette.toHsl(c.primary.toArgb()).first
+        fun k(v: Int) = Color(v)
+        fun a(sat: Float, l: Float) = k(CrtPalette.hsl(h, sat, l))
+        // ANSI set tuned for the dark tinted screen; red/yellow keep their meaning
+        val ansi = listOf(
+            0xFF3B3F4A, p.error, 0xFFA6E3A1.toInt(), p.warning, 0xFF89B4FA.toInt(), 0xFFCBA6F7.toInt(), 0xFF94E2D5.toInt(), p.dim,
+            0xFF6C7086.toInt(), p.error, 0xFFA6E3A1.toInt(), p.warning, 0xFF89B4FA.toInt(), 0xFFF5C2E7.toInt(), 0xFF94E2D5.toInt(), p.text,
+        ).map { k(it.toInt()) }
+        return TermColors(bg = k(p.screen), fg = k(p.text), prompt = k(p.prompt), err = k(p.error), dim = k(p.dim),
+            selection = k(p.selection), bar = k(p.panel), ansi = ansi)
+    }
     val ansi = if (dark) listOf(
         0xFF45475A, 0xFFF38BA8, 0xFFA6E3A1, 0xFFF9E2AF, 0xFF89B4FA, 0xFFCBA6F7, 0xFF94E2D5, 0xFFBAC2DE,
         0xFF6C7086, 0xFFF38BA8, 0xFFA6E3A1, 0xFFF9E2AF, 0xFF89B4FA, 0xFFF5C2E7, 0xFF94E2D5, 0xFFFFFFFF,
@@ -100,21 +114,21 @@ private fun termColors(): TermColors {
  * animation, so it costs nothing per frame beyond the blend. The same code path serves every API
  * level (no AGSL needed). No borders or strokes are drawn anywhere.
  */
-private fun Modifier.crtOverlay(on: Boolean): Modifier =
+private fun Modifier.crtOverlay(on: Boolean, p: CrtPalette): Modifier =
     if (!on) this else drawWithCache {
         val w = size.width
         val h = size.height
         val rows = (3.dp.toPx()).toInt().coerceIn(3, 6)
         val tile = ImageBitmap(3, rows)
         val c = Canvas(tile)
-        val sub = listOf(Color(1f, 0f, 0f, 0.07f), Color(0f, 1f, 0f, 0.07f), Color(0f, 0f, 1f, 0.07f))
+        val sub = listOf(Color(p.subR), Color(p.subG), Color(p.subB))
         for (y in 0 until rows) for (x in 0 until 3) {
-            val col = if (y == rows - 1) Color.Black.copy(alpha = 0.26f) else sub[x]
+            val col = if (y == rows - 1) Color(p.scanline) else sub[x]
             c.drawRect(x.toFloat(), y.toFloat(), x + 1f, y + 1f, Paint().apply { color = col })
         }
         val grid = ShaderBrush(ImageShader(tile, TileMode.Repeated, TileMode.Repeated))
         val vignette = Brush.radialGradient(
-            0.6f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.4f),
+            0.6f to Color.Transparent, 1f to Color(p.vignette),
             center = Offset(w / 2f, h / 2f), radius = kotlin.math.hypot(w, h) / 2f)
         onDrawWithContent {
             drawContent()
@@ -126,10 +140,14 @@ private fun Modifier.crtOverlay(on: Boolean): Modifier =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConsoleOverlay(onClose: () -> Unit) {
-    val t = termColors()
     val crt by ConsoleSession.crt.flow.collectAsStateWithLifecycle()
-    // bloom of bright text with a faint cyan fringe on the right edge (cheap chromatic aberration)
-    val glow = if (crt) Shadow(Color(0xFF7CF4FF).copy(alpha = 0.45f), Offset(1.4f, 0f), 7f) else null
+    val t = termColors(crt)
+    val scheme = MaterialTheme.colorScheme
+    val pal = remember(scheme.primary, scheme.error, scheme.background) {
+        CrtPalette.from(scheme.primary.toArgb(), scheme.error.toArgb(), scheme.background.luminance() < 0.5f)
+    }
+    // bloom of bright text with a faint accent-tinted fringe on the right edge (cheap chromatic aberration)
+    val glow = if (crt) Shadow(Color(pal.glow), Offset(1.4f, 0f), 7f) else null
     val lines = ConsoleSession.lines
     val running = ConsoleSession.running
     val listState = rememberLazyListState()
@@ -162,7 +180,7 @@ fun ConsoleOverlay(onClose: () -> Unit) {
 
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Surface(Modifier.fillMaxSize(), color = t.bg) {
-            Column(Modifier.fillMaxSize().crtOverlay(crt).systemBarsPadding().imePadding()) {
+            Column(Modifier.fillMaxSize().crtOverlay(crt, pal).systemBarsPadding().imePadding()) {
                 // title bar
                 Row(Modifier.fillMaxWidth().background(t.bar).padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically) {
