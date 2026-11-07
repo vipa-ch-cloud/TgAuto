@@ -71,6 +71,14 @@ object AppSettings {
     val dynamicColor = Pref("dynamic_color", true)
     val palette = Pref("palette", "indigo")
 
+    // Updates (OTA) and script store
+    val otaAutoCheck = Pref("ota_auto_check", true)
+    val otaAutoApply = Pref("ota_auto_apply", false)
+    val otaLastCheck = Pref("ota_last_check", "0")
+    val otaNotified = Pref("ota_notified", "")
+    val storeAutoUpdate = Pref("store_auto_update", false)
+    val storeLastCheck = Pref("store_last_check", "0")
+
     // Logs
     val logDebug = Pref("log_debug", false)
     val logInfo = Pref("log_info", true)

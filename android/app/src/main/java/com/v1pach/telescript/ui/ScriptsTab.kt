@@ -85,6 +85,8 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
                     BigButton(stringResource(if (tree.isEmpty()) R.string.scripts_pick_folder else R.string.scripts_change_folder), Icons.Default.Folder,
                         onClick = { picker.launch(null) }, modifier = Modifier.weight(1f))
                 }
+                BigButton(stringResource(R.string.store_title), Icons.Default.Store,
+                    onClick = { context.startActivity(Intent(context, com.v1pach.telescript.store.StoreActivity::class.java)) })
             }
         }
         if (!batteryOk) item {

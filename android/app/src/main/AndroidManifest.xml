@@ -34,6 +34,48 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".store.StoreActivity"
+            android:exported="false" />
+
+        <!-- Opens .tgadyn (OTA) and .tgascript (script package) files; content:// and file://. -->
+        <activity
+            android:name=".ota.OtaInstallActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="*/*" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.tgadyn" />
+                <data android:pathPattern=".*\\..*\\.tgadyn" />
+                <data android:pathPattern=".*\\..*\\..*\\.tgadyn" />
+                <data android:pathPattern=".*\\.tgascript" />
+                <data android:pathPattern=".*\\..*\\.tgascript" />
+                <data android:pathPattern=".*\\..*\\..*\\.tgascript" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/x-tgadyn" />
+                <data android:mimeType="application/x-tgascript" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-tgadyn" />
+                <data android:mimeType="application/x-tgascript" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".ScriptService"
             android:exported="false"

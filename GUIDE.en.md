@@ -124,6 +124,12 @@ The stable build does not have these sections.
 - Proxy secret: for MTProxy, hex (optionally dd/ee) or base64 is accepted; spaces are stripped and a wrong secret shows an error instead of a Python message.
 - Scripts (automod, auto-responder): Telegram reconnect spam in the log collapses into "no connection / restored" lines.
 
+## 15. OTA updates and the script store (1.9)
+
+Settings > Updates (OTA): install a signed `.tgadyn` from a file, check GitHub releases, auto-check (on by default, notification only), auto-apply (off by default), rollback, reset to built-in. OTA changes the Python layer, config schemas, strings and docs; the Kotlin UI, manifest and native libs need a new APK. Two failed starts roll back automatically.
+
+Scripts tab > Store: catalog from vipa-ch-cloud/TgAutoS with search, tags, details, install, update, rollback and delete. Script config and data are never overwritten. Script auto-update is off by default and covers only verified scripts that add no new network hosts. A `.tgascript` can be installed from a file; an unverified or unsigned one shows a warning (permissions, hosts, sha256, author) and needs a checkbox. There is no upload server: submit your script through a GitHub issue, the owner reviews it and adds the Verified label. Details: docs/OTA.md.
+
 ## Troubleshooting
 - `CANNOT LINK EXECUTABLE "node"`: run `pkg upgrade -y`, then `pkg install -y libc++ nodejs`.
 - "Check" reports `bad interpreter: No such file or directory`: in Termux run `pkg install -y libc++ nodejs` and restart Termux. TgAuto already starts the CLI through `node`, but nothing works without node.

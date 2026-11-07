@@ -112,6 +112,8 @@ fun SettingsTab() {
             }
         }
 
+        OtaSection()
+
         AppSectionCard {
             SectionHeader(Icons.Default.Info, stringResource(R.string.settings_about))
             Text("TgAuto ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,

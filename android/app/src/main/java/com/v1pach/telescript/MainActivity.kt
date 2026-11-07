@@ -61,6 +61,15 @@ class MainActivity : ComponentActivity() {
     private val startupPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
 
+    private var wrapped: android.content.res.Resources? = null
+    private var wrappedFor = ""
+    override fun getResources(): android.content.res.Resources {
+        val base = super.getResources()
+        val key = base.configuration.locales.toLanguageTags()
+        if (wrapped == null || wrappedFor != key) { wrapped = com.v1pach.telescript.ota.OtaManager.wrapResources(base); wrappedFor = key }
+        return wrapped!!
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

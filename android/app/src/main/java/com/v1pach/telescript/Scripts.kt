@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import org.json.JSONArray
+import com.v1pach.telescript.ota.OtaManager
+import com.v1pach.telescript.store.StoreManager
 import org.json.JSONObject
 import java.io.File
 
@@ -32,6 +34,9 @@ data class ScriptInfo(
     val dataDir: File,
     /** Document id of config.schema.json in the script's folder (package scripts only), "" if none. */
     val schemaDocId: String = "",
+    /** Installed from the script store: lives in filesDir/store/<id>/<version>, not synced from the SAF folder. */
+    val store: Boolean = false,
+    val storeDir: File? = null,
 )
 
 enum class RunStatus { IDLE, STARTING, RUNNING, STOPPING, ERROR }
@@ -155,24 +160,25 @@ object ScriptRepository {
     /** Rescans the folder; call from a background thread. */
     fun scan() {
         if (!::app.isInitialized) return
+        val installed = StoreManager.scriptInfos()
         val tree = treeUri()
         if (tree == null) {
-            _scripts.value = emptyList(); _problem.value = Str.get(R.string.rep_no_folder); return
+            _scripts.value = installed; _problem.value = Str.get(R.string.rep_no_folder); return
         }
         if (!hasAccess()) {
-            _scripts.value = emptyList(); _problem.value = Str.get(R.string.rep_access_revoked); return
+            _scripts.value = installed; _problem.value = Str.get(R.string.rep_access_revoked); return
         }
         _scanning.value = true
         try {
             val found = ArrayList<ScriptInfo>()
             walk(tree, DocumentsContract.getTreeDocumentId(tree), "", 0, found)
-            val ids = HashSet<String>()
+            val ids = HashSet<String>(installed.map { it.id })
             _scripts.value = found.map { s ->
                 var id = s.id
                 var n = 2
                 while (!ids.add(id)) id = "${s.id}_${n++}"
                 if (id == s.id) s else withId(s, id)
-            }.sortedBy { it.relPath.lowercase() }
+            }.let { installed + it }.sortedBy { it.relPath.lowercase() }
             _problem.value = ""
         } catch (e: Exception) {
             _problem.value = Str.get(R.string.rep_read_fail, e.message.orEmpty())
@@ -237,6 +243,8 @@ object ScriptRepository {
 
     /** Text of the script's config.schema.json read straight from the chosen folder, or null. */
     fun readSchema(script: ScriptInfo): String? {
+        if (script.store) return script.storeDir?.let { File(it, "config.schema.json").takeIf(File::isFile)?.readText() }
+        OtaManager.schemaFor(script.id)?.let { if (script.schemaDocId.isEmpty()) return it }
         val tree = treeUri() ?: return null
         if (script.schemaDocId.isEmpty() || !hasAccess()) return null
         return runCatching {
@@ -269,6 +277,10 @@ object ScriptRepository {
      * mtime/size changed since the last sync and deleting ones removed from the folder.
      */
     fun sync(script: ScriptInfo) {
+        if (script.store) { // store scripts are already in app storage
+            if (!script.entry.isFile) throw IllegalStateException(Str.get(R.string.rep_ex_missing, script.relPath))
+            return
+        }
         val tree = treeUri() ?: throw IllegalStateException(Str.get(R.string.rep_ex_no_folder))
         if (!hasAccess()) throw IllegalStateException(Str.get(R.string.rep_ex_revoked))
         val stateFile = File(Paths.syncState, "${script.id}.json")
@@ -327,7 +339,7 @@ object ScriptManager {
     fun preflight(): String? = when {
         !AppSettings.hasApiCredentials() -> Str.get(R.string.rep_need_api)
         !Paths.sessionFile.isFile -> Str.get(R.string.rep_need_login)
-        !ScriptRepository.hasAccess() -> Str.get(R.string.rep_no_access)
+        !ScriptRepository.hasAccess() && ScriptRepository.scripts.value.none { it.store } -> Str.get(R.string.rep_no_access)
         else -> null
     }
 
@@ -449,7 +461,7 @@ object LibManager {
         Thread({
             var ok = false
             try {
-                if (ScriptRepository.hasAccess()) ScriptRepository.sync(script)
+                if (script.store || ScriptRepository.hasAccess()) ScriptRepository.sync(script)
                 val result = Py.json(pip.callAttr("install_for_script", script.id,
                     script.entry.parentFile!!.absolutePath,
                     if (script.entry.isFile) script.entry.absolutePath else "",

@@ -1,0 +1,1 @@
+OTA sample 0.0.1-test: adds python/ts_ota_marker.py only.

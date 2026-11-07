@@ -1,0 +1,9 @@
+{
+  "name": "TgAuto OTA test",
+  "version": "0.0.1-test",
+  "build": 1,
+  "requires_base": {"version_name": ["1.9.0", "1.9.99"], "version_code": [20, null]},
+  "channel": "any",
+  "changelog_en": "Test update: adds a harmless marker module. No behaviour changes.",
+  "changelog_ru": "Тестовое обновление: добавляет безвредный модуль-маркер. Поведение не меняется."
+}
