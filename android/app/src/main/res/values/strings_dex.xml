@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dex_title">Plugin (.tgadex)</string>
+    <string name="dex_hint">A signed package with code and interface (dex). It runs inside the app with its privileges. Only the official key can apply automatically; community keys work only by hand with a warning.</string>
+    <string name="dex_none">No plugin installed (built-in code).</string>
+    <string name="dex_installed">Plugin: %1$s %2$s</string>
+    <string name="dex_unofficial">Signed by a community key: NOT official.</string>
+    <string name="dex_state_loaded">Status: loaded and running.</string>
+    <string name="dex_state_pending">Status: installed, loads at next start.</string>
+    <string name="dex_state_error">Status: failed to load (%1$s).</string>
+    <string name="dex_rolled_back">Plugin %1$s failed to start twice and was rolled back automatically.</string>
+    <string name="dex_from_file">Install plugin from file (.tgadex)</string>
+    <string name="dex_check">Check GitHub releases for a plugin</string>
+    <string name="dex_auto_apply">Apply official plugin updates automatically</string>
+    <string name="dex_auto_apply_hint">Off by default. Only packages signed by the official key; applied at next start, rolled back after two failed starts.</string>
+    <string name="dex_rollback">Roll back to previous plugin</string>
+    <string name="dex_remove">Remove plugin</string>
+    <string name="dex_remove_text">The plugin is removed; the app uses only its built-in code. Takes effect at next start.</string>
+    <string name="dex_screen_failed">The plugin screen failed to open.</string>
+    <string name="dex_install_title">Plugin (.tgadex)</string>
+    <string name="dex_field_id">%1$s, version %2$s (build %3$d)</string>
+    <string name="dex_field_req">Requires app %1$s+, plugin API %2$d, channel %3$s</string>
+    <string name="dex_field_entry">Entry class: %1$s</string>
+    <string name="dex_field_installed">Installed plugin: %1$s</string>
+    <string name="dex_code_warning_title">This package runs code</string>
+    <string name="dex_code_warning">The plugin executes inside TgAuto with full access to the app and its data. Install only from authors you trust.</string>
+    <string name="dex_community_confirm">I trust this author and accept the risk</string>
+    <string name="dex_installed_restart">Plugin %1$s installed. Fully close and reopen the app to load it.</string>
+    <string name="dex_notif_available">Plugin update %1$s is available (Settings &gt; Updates).</string>
+    <string name="dex_notif_applied">Plugin %1$s installed; restart the app to load it.</string>
+    <string name="ota_err_bad_dex">The file is not a valid dex.</string>
+    <string name="ota_err_wrong_api">The plugin needs a different plugin API version than this app provides.</string>
+</resources>

@@ -167,3 +167,6 @@ Details: `docs/TERMINAL.md`.
 - Script errors are in the "Logs" tab.
 
 Everyone needs their own Claude account and api_id/api_hash: you do steps 3 (and 3b if you need Gemini) and 6 yourself.
+
+## .tgadex plugins
+Signed code/UI (dex) packages, separate from `.tgadyn`. Details: [docs/TGADEX.md](docs/TGADEX.md). Settings -> Updates -> Plugin.

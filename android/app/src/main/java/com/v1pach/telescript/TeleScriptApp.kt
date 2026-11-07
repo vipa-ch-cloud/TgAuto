@@ -15,6 +15,8 @@ class TeleScriptApp : Application() {
         Providers.init(this)
         com.v1pach.telescript.ota.ApkUpdater.init(this)
         OtaManager.init(this) // boot guard + strings overlay, before anything imports OTA-able code
+        com.v1pach.telescript.ota.DexManager.init(this) // .tgadex plugin boot guard (separate from the OTA overlay)
+        runCatching { com.v1pach.telescript.ota.DexManager.load() }
         if (!Python.isStarted()) Python.start(AndroidPlatform(this))
         runCatching { OtaManager.applyPythonPath() }
         ScriptRepository.init(this)
@@ -23,6 +25,7 @@ class TeleScriptApp : Application() {
         Thread({
             if (runCatching { Py.host }.isSuccess) OtaManager.confirmBoot()
             runCatching { OtaManager.autoCheck() }
+            runCatching { com.v1pach.telescript.ota.DexManager.autoCheck() }
             runCatching { com.v1pach.telescript.ota.ApkUpdater.autoCheck() }
             runCatching { StoreManager.autoCheck() }
         }, "py-warmup").start()

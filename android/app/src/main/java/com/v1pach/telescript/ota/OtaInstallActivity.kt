@@ -29,11 +29,12 @@ class OtaInstallActivity : ComponentActivity() {
         data object Loading : UiState
         data class Error(val text: String) : UiState
         data class Ota(val pkg: OtaPackage) : UiState
+        data class Dex(val pkg: DexPackage, val file: File) : UiState
         data class Script(val c: Candidate) : UiState
         data class Done(val text: String) : UiState
     }
 
-    companion object { const val EXTRA_DOWNLOADED = "downloaded" }
+    companion object { const val EXTRA_DOWNLOADED = "downloaded"; const val EXTRA_DEX_DOWNLOADED = "downloaded_dex" }
 
     private var state by mutableStateOf<UiState>(UiState.Loading)
 
@@ -42,14 +43,16 @@ class OtaInstallActivity : ComponentActivity() {
         val uri: Uri? = if (intent.action == Intent.ACTION_SEND)
             @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM) else intent.data
         setAppScreen { Screen() }
-        val downloaded = intent.getBooleanExtra(EXTRA_DOWNLOADED, false)
+        val dexDownloaded = intent.getBooleanExtra(EXTRA_DEX_DOWNLOADED, false)
+        val downloaded = intent.getBooleanExtra(EXTRA_DOWNLOADED, false) || dexDownloaded
         if (uri == null && !downloaded) { state = UiState.Error(Str.get(R.string.ota_err_no_file)); return }
         Thread({
             state = try {
                 // EXTRA_DOWNLOADED only ever points at the app's own, already size-capped download.
-                val f = if (downloaded) File(cacheDir, "ota-download.tgadyn") else copyIncoming(this, uri!!, OtaCore.MAX_PACKAGE)
+                val f = if (dexDownloaded) File(cacheDir, "dex-download.tgadex") else if (downloaded) File(cacheDir, "ota-download.tgadyn") else copyIncoming(this, uri!!, OtaCore.MAX_PACKAGE)
                 when (OtaCore.peekFormat(f)) {
                     OtaCore.OTA_FORMAT -> UiState.Ota(OtaManager.verifyFile(f))
+                    DexCore.FORMAT -> UiState.Dex(DexManager.verifyFile(f), f)
                     OtaCore.SCRIPT_FORMAT -> UiState.Script(StoreManager.fromFile(f))
                     else -> throw OtaException("bad_format", "manifest")
                 }
@@ -70,6 +73,7 @@ class OtaInstallActivity : ComponentActivity() {
                 BigButton(stringResource(R.string.ota_close), Icons.Default.Close, onClick = { finish() })
             }
             is UiState.Ota -> OtaDetails(s.pkg)
+            is UiState.Dex -> DexDetails(s.pkg, s.file)
             is UiState.Script -> ScrollColumn {
                 TabHeader(stringResource(R.string.store_install_title))
                 ScriptInstallContent(s.c,
@@ -122,6 +126,45 @@ class OtaInstallActivity : ComponentActivity() {
                     state = try { OtaManager.install(pkg); UiState.Done(Str.get(R.string.ota_installed_restart, pkg.version)) }
                     catch (e: Throwable) { UiState.Error(OtaManager.errorText(e)) }
                 }, "ota-install").start()
+            })
+            BigButton(stringResource(R.string.ota_cancel), Icons.Default.Close, onClick = { finish() }, danger = true)
+        }
+    }
+
+    @Composable
+    private fun DexDetails(pkg: DexPackage, file: File) {
+        val m = pkg.manifest
+        val ru = Str.isRu()
+        val change = m.optString(if (ru) "changelog_ru" else "changelog_en").ifBlank { m.optString("changelog_en") }
+        var busy by remember { mutableStateOf(false) }
+        var accepted by remember { mutableStateOf(false) }
+        val community = pkg.communityKey
+        ScrollColumn {
+            TabHeader(stringResource(R.string.dex_install_title))
+            AppSectionCard {
+                Text(m.optString("name"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Hint(stringResource(R.string.dex_field_id, pkg.id, pkg.version, m.optInt("build")))
+                Hint(stringResource(R.string.dex_field_req, m.optString("minAppVersion"), m.optInt("apiVersion"), m.optString("channel", "any")))
+                Hint(stringResource(R.string.dex_field_entry, pkg.entry))
+                Hint(stringResource(R.string.dex_field_installed, DexManager.installedVersion() ?: "-"))
+                Text(stringResource(R.string.dex_code_warning_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                Hint(stringResource(R.string.dex_code_warning), MaterialTheme.colorScheme.error)
+                if (community == null) Hint(stringResource(R.string.ota_sig_ok), MaterialTheme.colorScheme.primary)
+                else {
+                    val author = OtaManager.communityAuthor(OtaPackage(m, emptyMap(), true, community)).orEmpty()
+                    Text(stringResource(R.string.ota_community_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                    Hint(stringResource(R.string.ota_community_text, author, TrustedKeys.fingerprint(community)), MaterialTheme.colorScheme.error)
+                    SwitchRow(stringResource(R.string.dex_community_confirm), null, accepted) { accepted = it }
+                }
+                if (change.isNotBlank()) { Text(stringResource(R.string.ota_changelog), color = MaterialTheme.colorScheme.onSurface); Hint(change) }
+            }
+            Hint(stringResource(R.string.ota_restart_note))
+            BigButton(stringResource(R.string.ota_install), Icons.Default.SystemUpdate, loading = busy, enabled = community == null || accepted, onClick = {
+                busy = true
+                Thread({
+                    state = try { DexManager.install(pkg, file); UiState.Done(Str.get(R.string.dex_installed_restart, pkg.version)) }
+                    catch (e: Throwable) { UiState.Error(OtaManager.errorText(e)) }
+                }, "dex-install").start()
             })
             BigButton(stringResource(R.string.ota_cancel), Icons.Default.Close, onClick = { finish() }, danger = true)
         }
