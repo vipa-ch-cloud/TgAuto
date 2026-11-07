@@ -130,6 +130,13 @@ Settings > Updates (OTA): install a signed `.tgadyn` from a file, check GitHub r
 
 Scripts tab > Store: catalog from vipa-ch-cloud/TgAutoS with search, tags, details, install, update, rollback and delete. Script config and data are never overwritten. Script auto-update is off by default and covers only verified scripts that add no new network hosts. A `.tgascript` can be installed from a file; an unverified or unsigned one shows a warning (permissions, hosts, sha256, author) and needs a checkbox. There is no upload server: submit your script through a GitHub issue, the owner reviews it and adds the Verified label. Details: docs/OTA.md.
 
+### Community sources and cards (1.9.1)
+The store shows cards with colour, icon, version, author, date and a repository link. "Sources" lets you add a
+third-party catalog (index.json URL, https) and an optional Ed25519 key (64 hex). Foreign sources never get
+verified/official; without a key they are unsigned, with a warning. Same sha256, permission and install-confirm
+checks. Updates from foreign sources are manual only.
+OTA fetches only .tgadyn from the releases/latest of the TgAuto repo; the app does not download or install APKs.
+
 ## Troubleshooting
 - `CANNOT LINK EXECUTABLE "node"`: run `pkg upgrade -y`, then `pkg install -y libc++ nodejs`.
 - "Check" reports `bad interpreter: No such file or directory`: in Termux run `pkg install -y libc++ nodejs` and restart Termux. TgAuto already starts the CLI through `node`, but nothing works without node.

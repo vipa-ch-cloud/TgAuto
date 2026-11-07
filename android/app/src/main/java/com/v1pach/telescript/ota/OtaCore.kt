@@ -142,8 +142,10 @@ object OtaCore {
     /**
      * Full check of a package file: size caps, zip-bomb guard, signature (mandatory for .tgadyn,
      * optional but then valid for .tgascript), manifest, compatibility, paths and sha256 of every file.
+     * A null [publicKey] (script packages from a keyless community source) means a signature cannot be
+     * checked, so it is ignored and the package counts as unsigned.
      */
-    fun verify(file: File, publicKey: ByteArray, baseName: String, baseCode: Int, flavor: String, expect: String? = null): OtaPackage {
+    fun verify(file: File, publicKey: ByteArray?, baseName: String, baseCode: Int, flavor: String, expect: String? = null): OtaPackage {
         if (file.length() > MAX_PACKAGE) throw OtaException("too_big", "package")
         val zf = try { ZipFile(file) } catch (e: Exception) { throw OtaException("not_zip", e.message.orEmpty()) }
         zf.use { z ->
@@ -165,14 +167,14 @@ object OtaCore {
             val manifest = try { JSONObject(mb.toString(Charsets.UTF_8)) } catch (e: Exception) { throw OtaException("bad_manifest", "json") }
             val fmt = manifest.optString("format")
             if ((fmt != OTA_FORMAT && fmt != SCRIPT_FORMAT) || (expect != null && fmt != expect)) throw OtaException("bad_format")
-            val signed = SIGNATURE in names
+            val signed = SIGNATURE in names && publicKey != null
             if (!signed && fmt == OTA_FORMAT) throw OtaException("unsigned")
             if (signed) {
                 val sigEntry = z.getEntry(SIGNATURE)!!
                 if (sigEntry.size > 512) throw OtaException("bad_signature")
                 val sig = b64(readBounded(z, SIGNATURE, sigEntry.size))
                 val magic = if (fmt == OTA_FORMAT) MAGIC_OTA else MAGIC_SCRIPT
-                if (sig == null || !Ed25519.verify(publicKey, magic + mb, sig)) throw OtaException("bad_signature")
+                if (sig == null || !Ed25519.verify(publicKey!!, magic + mb, sig)) throw OtaException("bad_signature")
             }
             validateManifest(manifest)
             checkBase(manifest, baseName, baseCode, flavor)

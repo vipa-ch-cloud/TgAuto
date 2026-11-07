@@ -54,6 +54,9 @@ def main():
             "verified": bool(mt.get("verified") or mt.get("official")), "official": bool(mt.get("official")),
             "signed": signed,
         })
+        for k in ("title_ru", "title_en", "icon", "color", "repo", "published", "homepage"):
+            if m.get(k):
+                entries[-1][k] = m[k]
     index = {"format": c.INDEX_FORMAT, "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "scripts": entries}
     data = json.dumps(index, sort_keys=True, indent=1, ensure_ascii=False).encode("utf-8") + b"\n"
     os.makedirs(a.out, exist_ok=True)

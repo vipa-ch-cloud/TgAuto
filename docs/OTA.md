@@ -39,3 +39,25 @@ Build: `tools/make_script_pkg.py`, `tools/make_store_index.py`; repo template: `
 ## Limits
 No upload backend: user scripts go through a GitHub issue/PR and owner review. The static scan is a
 hint, not a guarantee. Store updates cover store-installed scripts only, not SAF-folder scripts.
+
+## 1.9.1: store cards, metadata, community sources
+
+Optional manifest/catalog fields (all ignored if absent, old catalogs keep working): `title_ru`, `title_en`,
+`icon` (shield, chat_reply, bot, script, tool, star, bell, lock; anything else = script), `color` (hex `#RRGGBB`),
+`repo` (https URL), `published` (ISO date), `homepage` (https URL). `tools/make_store_index.py` copies them from
+`tgascript.json` into the index; the app also reads them from the installed package.
+
+Community sources (Store, "Sources"): the official catalog is built in and verified with the key from OtaKeys.
+A user may add an extra `index.json` URL (https only) and an optional Ed25519 public key (64 hex). Rules:
+- Foreign sources are never `verified` or `official`, whatever their index claims.
+- With a key the index signature is checked; without a key the source is unsigned and shown with a warning.
+- Same checks as always: sha256, permission list, static scan, explicit install confirmation.
+- Adding a source needs a confirmation with a warning. Sources are stored in Settings (`store_sources`).
+- Updates from third-party sources are manual only; an id installed from one source cannot be replaced from another.
+
+What the app fetches automatically: `OtaManager` queries `releases/latest` of `vipa-ch-cloud/TgAuto` (https only),
+takes the first asset ending in `.tgadyn`, parses the version from its name and offers it if it is newer than the
+installed one. Base compatibility (`requires_base`, channel) is checked at verify time. Auto-check runs at start
+(default on, at most once per 6 h); auto-apply is off by default (takes effect after restart). Pre-releases and
+older releases are not examined. The app does NOT download or install APKs (no REQUEST_INSTALL_PACKAGES).
+1.9.1 UI (Compose) changes ship only in the APK; `.tgadyn` carries Python, strings and schemas.

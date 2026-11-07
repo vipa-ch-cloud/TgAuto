@@ -1,10 +1,14 @@
 import com.v1pach.telescript.ota.OtaCore
 import com.v1pach.telescript.ota.OtaException
+import com.v1pach.telescript.store.*
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 
 /** Plain-JVM test of the production OtaCore/Ed25519 against fixtures made by gen_fixtures.py. */
 var failed = 0
 fun check(name: String, ok: Boolean) { println((if (ok) "PASS " else "FAIL ") + name); if (!ok) failed++ }
+fun code2(block: () -> Any?): String = try { block(); "ok" } catch (e: IllegalArgumentException) { e.message ?: "" }
 fun code(block: () -> Any?): String = try { block(); "ok" } catch (e: OtaException) { e.code }
 
 fun main(args: Array<String>) {
@@ -33,6 +37,34 @@ fun main(args: Array<String>) {
     check("index sig", OtaCore.verifyIndex(idx, File("$d/index.json.sig").readBytes(), pub))
     check("index tampered", !OtaCore.verifyIndex(idx + " ".toByteArray(), File("$d/index.json.sig").readBytes(), pub))
     check("vcmp", OtaCore.vcmp("1.10.0", "1.9.9") > 0 && OtaCore.vcmp("1.9", "1.9.0") == 0 && OtaCore.vcmp("0.0.1-test", "0.0.2") < 0)
+    // ---- store metadata / sources (1.9.1) ----
+    check("script keyless: signature ignored", v("signed.tgascript").signed && OtaCore.verify(File("$d/signed.tgascript"), null, "1.9.0", 20, "stable").let { !it.signed })
+    check("ota needs key", code { OtaCore.verify(File("$d/ok.tgadyn"), null, "1.9.0", 20, "stable") } == "unsigned")
+    check("icon", StoreMeta.iconKey("Shield") == "shield" && StoreMeta.iconKey("bogus") == "script" && StoreMeta.iconKey(null) == "script")
+    check("color", StoreMeta.normColor("#3f7d2a") == "#3F7D2A" && StoreMeta.normColor("abc") == "#AABBCC" && StoreMeta.normColor("red") == null && StoreMeta.normColor("") == null)
+    check("contrast", StoreMeta.darkTextOn(0xFFFF00) && !StoreMeta.darkTextOn(0x0F6B7A) && !StoreMeta.darkTextOn(0x3F7D2A) && StoreMeta.darkTextOn(0xFFFFFF))
+    check("urls/dates", StoreMeta.safeUrl("javascript:alert(1)") == null && StoreMeta.safeUrl("https://x.y/z") != null && StoreMeta.dateOnly("2026-11-07T10:00:00Z") == "2026-11-07" && StoreMeta.dateOnly("yesterday") == null)
+    val old = ModuleMeta.from(JSONObject("{}"))
+    check("old catalog fallback", old.title(true, "automod") == "automod" && old.icon == "script" && old.color == null)
+    val nm = ModuleMeta.from(JSONObject("""{"title_ru":"Автомодератор","title_en":"Auto Moderator","icon":"shield","color":"#3F7D2A","repo":"https://github.com/a/b","published":"2026-11-07"}"""))
+    check("titles", nm.title(true, "x") == "Автомодератор" && nm.title(false, "x") == "Auto Moderator" && nm.icon == "shield")
+    val sha = "a".repeat(64)
+    val arr = JSONArray("""[{"id":"s1","name":"S","version":"1.0","sha256":"$sha","url":"https://x/y.tgascript","verified":true,"official":true},
+        {"id":"BAD ID","version":"1.0","sha256":"$sha","url":"https://x"},{"id":"s2","version":"1.0","sha256":"zz","url":"https://x"}]""")
+    val off = StoreSource(StoreMeta.OFFICIAL_ID, "o", "https://o", "00")
+    val com = StoreMeta.newSource("c", "https://c.example/index.json", "")
+    val eo = StoreMeta.parseEntries(arr, off); val ec = StoreMeta.parseEntries(arr, com)
+    check("entries filtered", eo.size == 1 && ec.size == 1)
+    check("official keeps labels", eo[0].verified && eo[0].official)
+    check("community never verified", !ec[0].verified && !ec[0].official && ec[0].sourceId == com.id)
+    check("source input", code2 { StoreMeta.newSource("", "http://x/i.json", "") } == "url" && code2 { StoreMeta.newSource("", "https://x/i.json", "12") } == "key" && com.keyHex == null && com.name == "c" && StoreMeta.newSource("", "https://c.example/i.json", "").name == "c.example")
+    val rt = StoreMeta.parseSources(StoreMeta.serializeSources(listOf(off, com, StoreMeta.newSource("k", "https://k/i.json", "AB".repeat(32)))))
+    check("sources roundtrip", rt.size == 2 && rt[1].keyHex == "ab".repeat(32) && rt.none { it.official })
+    check("sources garbage", StoreMeta.parseSources("not json").isEmpty())
+    args.getOrNull(1)?.let { File(it) }?.takeIf { it.exists() }?.let { f ->
+        val e = StoreMeta.parseEntries(JSONObject(f.readText()).getJSONArray("scripts"), off)
+        check("real catalog", e.isNotEmpty() && e.all { it.meta.color != null && it.meta.icon in StoreMeta.ICONS && it.meta.title(true, "").isNotEmpty() })
+    }
     println(if (failed == 0) "ALL OK" else "$failed FAILED")
     if (failed > 0) System.exit(1)
 }

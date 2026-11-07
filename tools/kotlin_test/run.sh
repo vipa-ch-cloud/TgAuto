@@ -8,5 +8,6 @@ JSON_JAR=${JSON_JAR:-$(find "$HOME/.gradle" -name 'json-*.jar' | head -1)}
 OUT=$(mktemp -d)
 python3 -I "$HERE/gen_fixtures.py" "$OUT/fx"
 "$KOTLINC" -nowarn -cp "$JSON_JAR" -d "$OUT/classes" "$HERE/../../android/app/src/main/java/com/v1pach/telescript/ota/Ed25519.kt" \
-  "$HERE/../../android/app/src/main/java/com/v1pach/telescript/ota/OtaCore.kt" "$HERE/OtaCoreTest.kt"
-java -cp "$OUT/classes:$JSON_JAR:$("$KOTLINC" -version >/dev/null 2>&1; dirname "$(command -v "$KOTLINC")")/../lib/kotlin-stdlib.jar" OtaCoreTestKt "$OUT/fx"
+  "$HERE/../../android/app/src/main/java/com/v1pach/telescript/ota/OtaCore.kt" \
+  "$HERE/../../android/app/src/main/java/com/v1pach/telescript/store/StoreMeta.kt" "$HERE/OtaCoreTest.kt"
+java -cp "$OUT/classes:$JSON_JAR:$("$KOTLINC" -version >/dev/null 2>&1; dirname "$(command -v "$KOTLINC")")/../lib/kotlin-stdlib.jar" OtaCoreTestKt "$OUT/fx" "${REAL_INDEX:-}"

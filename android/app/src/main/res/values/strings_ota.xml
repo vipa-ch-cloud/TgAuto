@@ -93,4 +93,25 @@
     <string name="store_perms_risky">Risky constructs</string>
     <string name="store_perms_note">The scan is a static hint, not a guarantee: code can build addresses and calls at runtime.</string>
     <string name="store_files">Files in package: %1$d</string>
+    <string name="store_other_source">Script %1$s is already installed from another source. Delete it first.</string>
+    <string name="store_source">Source</string>
+    <string name="store_repo_link">repository</string>
+    <string name="store_src_official">Official (TgAutoS)</string>
+    <string name="store_src_file">Local file</string>
+    <string name="store_src_note_key">Community source: its signature only proves the index came from its author. The script is NOT verified or reviewed by the TgAuto owner.</string>
+    <string name="store_src_note_nokey">Community source without a key: the catalog is unsigned and can be forged. The script is NOT verified or reviewed.</string>
+    <string name="store_sources">Sources</string>
+    <string name="store_sources_hint">The official catalog is built in. Community repositories are added by you: their scripts are never marked Verified or Official and are updated only manually.</string>
+    <string name="store_src_builtin">Built in, official key</string>
+    <string name="store_src_key">Author key %1$s…</string>
+    <string name="store_src_nokey">No key: unsigned</string>
+    <string name="store_src_add">Add source</string>
+    <string name="store_src_remove_text">Remove this source from the list? Scripts already installed from it stay.</string>
+    <string name="store_src_err_url">Enter an https:// address of index.json.</string>
+    <string name="store_src_err_key">The key must be 64 hex characters (Ed25519 public key) or empty.</string>
+    <string name="store_src_name">Name (optional)</string>
+    <string name="store_src_key_field">Author public key, Ed25519 hex (optional)</string>
+    <string name="store_src_next">Next</string>
+    <string name="store_src_warn">A community source is not reviewed by the TgAuto owner. Its scripts run with access to your Telegram account, the network and your LLM. They will be shown as Unverified and need your confirmation every time; updates are manual.</string>
+    <string name="store_src_warn_nokey">No key given: the catalog will be treated as unsigned and package signatures are not checked.</string>
 </resources>

@@ -184,7 +184,9 @@ class OtaTest(unittest.TestCase):
         with open(os.path.join(src, "demo.py"), "w") as fh:
             fh.write("print(1)\n")
         with open(os.path.join(src, "tgascript.json"), "w") as fh:
-            json.dump({"id": "demo", "name": "Demo", "version": "1.2", "build": 1, "entry": "demo.py", "tags": ["t"], "permissions": {}}, fh)
+            json.dump({"id": "demo", "name": "Demo", "version": "1.2", "build": 1, "entry": "demo.py", "tags": ["t"], "permissions": {},
+                       "title_ru": "Демо", "title_en": "Demo app", "icon": "bell", "color": "#112233",
+                       "repo": "https://github.com/a/b", "published": "2026-11-07", "homepage": "https://a.b"}, fh)
         pk = os.path.join(self.dir, "pk")
         os.makedirs(pk)
         py = [sys.executable, "-I"]
@@ -192,7 +194,10 @@ class OtaTest(unittest.TestCase):
         subprocess.run(py + [os.path.join(HERE, "make_store_index.py"), pk, "--base-url", "https://x/y", "--key", pem, "-o", pk], check=True, capture_output=True)
         idx = open(os.path.join(pk, "index.json"), "rb").read()
         self.assertTrue(c.verify_index(idx, open(os.path.join(pk, "index.json.sig"), "rb").read(), self.pub))
-        self.assertEqual(json.loads(idx)["scripts"][0]["url"], "https://x/y/demo-1.2.tgascript")
+        e = json.loads(idx)["scripts"][0]
+        self.assertEqual(e["url"], "https://x/y/demo-1.2.tgascript")
+        self.assertEqual((e["title_ru"], e["icon"], e["color"], e["repo"], e["published"], e["homepage"]),
+                         ("Демо", "bell", "#112233", "https://github.com/a/b", "2026-11-07", "https://a.b"))
 
     def _write(self, items):
         with zipfile.ZipFile(self.f, "w", zipfile.ZIP_DEFLATED) as z:

@@ -13,3 +13,15 @@ Review flow:
 
 There is no upload server. Not-yet-reviewed scripts stay out of the catalog; users can still install them
 from a file, with a clear warning.
+
+## Optional card metadata (1.9.1)
+
+Add to `tgascript.json` (all optional): `title_ru`, `title_en`, `icon` (shield, chat_reply, bot, script, tool,
+star, bell, lock), `color` (`#RRGGBB`), `repo`, `published` (ISO date), `homepage`. `make_store_index.py` copies
+them into `index.json`.
+
+## Community sources
+
+Anyone can host their own catalog with the same layout. Users add its `index.json` URL (https) in the app under
+Store -> Sources; an optional Ed25519 public key (64 hex) makes the app verify `index.json.sig`. Without a key the
+source is unsigned. Foreign sources are never marked verified/official, and their updates are manual.

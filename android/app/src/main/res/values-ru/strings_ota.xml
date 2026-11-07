@@ -93,4 +93,25 @@
     <string name="store_perms_risky">Рискованные конструкции</string>
     <string name="store_perms_note">Сканирование статическое и не гарантия: код может формировать адреса и вызовы во время работы.</string>
     <string name="store_files">Файлов в пакете: %1$d</string>
+    <string name="store_other_source">Скрипт %1$s уже установлен из другого источника. Сначала удалите его.</string>
+    <string name="store_source">Источник</string>
+    <string name="store_repo_link">репозиторий</string>
+    <string name="store_src_official">Официальный (TgAutoS)</string>
+    <string name="store_src_file">Локальный файл</string>
+    <string name="store_src_note_key">Сторонний источник: подпись лишь подтверждает, что каталог от его автора. Скрипт НЕ проверен владельцем TgAuto.</string>
+    <string name="store_src_note_nokey">Сторонний источник без ключа: каталог не подписан и может быть подделан. Скрипт НЕ проверен.</string>
+    <string name="store_sources">Источники</string>
+    <string name="store_sources_hint">Официальный каталог встроен. Репозитории сообщества добавляете вы: их скрипты никогда не получают метки «Проверен» или «Официальный» и обновляются только вручную.</string>
+    <string name="store_src_builtin">Встроенный, ключ владельца</string>
+    <string name="store_src_key">Ключ автора %1$s…</string>
+    <string name="store_src_nokey">Без ключа: не подписан</string>
+    <string name="store_src_add">Добавить источник</string>
+    <string name="store_src_remove_text">Убрать источник из списка? Уже установленные из него скрипты останутся.</string>
+    <string name="store_src_err_url">Укажите https:// адрес index.json.</string>
+    <string name="store_src_err_key">Ключ: 64 hex-символа (публичный Ed25519) или пусто.</string>
+    <string name="store_src_name">Название (необязательно)</string>
+    <string name="store_src_key_field">Публичный ключ автора, Ed25519 hex (необязательно)</string>
+    <string name="store_src_next">Далее</string>
+    <string name="store_src_warn">Сторонний источник не проверяется владельцем TgAuto. Его скрипты работают с доступом к вашему аккаунту Telegram, сети и LLM. Они будут показаны как «Не проверен» и требуют вашего подтверждения каждый раз; обновления только вручную.</string>
+    <string name="store_src_warn_nokey">Ключ не указан: каталог считается неподписанным, подписи пакетов не проверяются.</string>
 </resources>

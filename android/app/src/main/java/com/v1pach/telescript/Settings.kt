@@ -78,6 +78,8 @@ object AppSettings {
     val otaNotified = Pref("ota_notified", "")
     val storeAutoUpdate = Pref("store_auto_update", false)
     val storeLastCheck = Pref("store_last_check", "0")
+    /** Community catalog sources added by the user (JSON array; the official one is built in). */
+    val storeSources = Pref("store_sources", "[]")
 
     // Logs
     val logDebug = Pref("log_debug", false)

@@ -26,6 +26,25 @@ import com.v1pach.telescript.ota.OtaCore
 import com.v1pach.telescript.ota.OtaManager
 import com.v1pach.telescript.ui.*
 
+private fun sourceOf(id: String) = StoreManager.sources().firstOrNull { it.id == id }
+@Composable
+private fun sourceLabel(id: String): String = when (id) {
+    StoreMeta.OFFICIAL_ID -> stringResource(R.string.store_src_official)
+    "file" -> stringResource(R.string.store_src_file)
+    else -> sourceOf(id)?.name ?: id
+}
+
+@Composable
+private fun entryBadges(e: StoreEntry, inst: InstalledScript?, fg: androidx.compose.ui.graphics.Color) {
+    if (e.verified) CardBadge(stringResource(if (e.official) R.string.store_official else R.string.store_verified), Icons.Default.Verified, fg)
+    else CardBadge(stringResource(R.string.store_unverified), Icons.Default.Warning, fg)
+    if (e.sourceId != StoreMeta.OFFICIAL_ID) CardBadge(sourceLabel(e.sourceId), Icons.Default.Groups, fg)
+    if (inst != null) {
+        if (OtaCore.vcmp(e.version, inst.version) > 0) CardBadge(stringResource(R.string.store_update_avail, inst.version), Icons.Default.Update, fg)
+        else CardBadge(stringResource(R.string.store_installed_ver, inst.version), Icons.Default.CheckCircle, fg)
+    }
+}
+
 const val SUBMIT_URL = "https://github.com/${StoreManager.REPO}/issues/new?template=submit-script.yml"
 
 /**
@@ -41,7 +60,8 @@ fun ScriptInstallContent(c: Candidate, onInstall: () -> Unit, onCancel: () -> Un
     val installedVer = StoreManager.installed.value[c.id]?.version
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         AppSectionCard {
-            Text(c.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(c.meta.title(ru, c.name), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Hint(stringResource(R.string.store_source) + ": " + sourceLabel(c.sourceId))
             Hint("id: ${c.id}  v${c.version}" + (installedVer?.let { "  (" + stringResource(R.string.store_installed_ver, it) + ")" } ?: ""))
             Hint(stringResource(R.string.store_author, c.author.ifBlank { "?" }))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -105,6 +125,7 @@ fun StoreScreen(onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var confirmDelete by remember { mutableStateOf(false) }
+    var showSources by remember { mutableStateOf(false) }
     val ru = Str.isRu()
 
     fun run(block: () -> Unit) {
@@ -120,8 +141,9 @@ fun StoreScreen(onBack: () -> Unit) {
             candidate = StoreManager.fromFile(f)
         }
     }
-    BackHandler { when { candidate != null -> candidate = null; selected != null -> selected = null; else -> onBack() } }
+    BackHandler { when { showSources -> showSources = false; candidate != null -> candidate = null; selected != null -> selected = null; else -> onBack() } }
 
+    if (showSources) { SourcesScreen(onClose = { showSources = false }); return }
     val cand = candidate
     if (cand != null) {
         ScrollColumn {
@@ -136,17 +158,15 @@ fun StoreScreen(onBack: () -> Unit) {
 
     val sel = selected
     if (sel != null) {
-        val inst = installed[sel.id]
+        val inst = installed[sel.id]?.takeIf { it.sourceId == sel.sourceId }
         ScrollColumn {
-            TabHeader(sel.name)
+            TabHeader(sel.title(ru))
+            StoreCard(sel.title(ru), sel.desc(ru), sel.meta, sel.version, sel.author) { fg -> entryBadges(sel, inst, fg) }
             AppSectionCard {
-                Hint("id: ${sel.id}  v${sel.version}  ·  " + stringResource(R.string.store_author, sel.author.ifBlank { "?" }))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (sel.verified) StatusPill(stringResource(if (sel.official) R.string.store_official else R.string.store_verified), MaterialTheme.colorScheme.primary)
-                    else StatusPill(stringResource(R.string.store_unverified), MaterialTheme.colorScheme.error)
-                    if (inst != null) StatusPill(stringResource(R.string.store_installed_ver, inst.version), MaterialTheme.colorScheme.secondary)
-                }
-                Text(sel.desc(ru), color = MaterialTheme.colorScheme.onSurface)
+                Hint("id: ${sel.id}  ·  " + stringResource(R.string.store_source) + ": " + sourceLabel(sel.sourceId))
+                if (!sel.verified) Hint(stringResource(if (sourceOf(sel.sourceId)?.hasKey == true) R.string.store_src_note_key else R.string.store_src_note_nokey),
+                    MaterialTheme.colorScheme.error)
+                sel.meta.homepage?.let { h -> TextButton({ openLink(context, h) }) { Text(h) } }
                 if (sel.tags.isNotEmpty()) Hint(sel.tags.joinToString(" · ") { "#$it" })
                 Hint(stringResource(R.string.store_perms_declared) + ": " + (sel.permissions.toString().takeIf { it != "{}" } ?: "-"))
                 Hint("sha256: ${sel.sha256}")
@@ -173,7 +193,7 @@ fun StoreScreen(onBack: () -> Unit) {
     val allTags = entries.flatMap { it.tags }.distinct().sorted()
     val shown = entries.filter { e ->
         (tag.isEmpty() || tag in e.tags) && (query.isBlank() ||
-            listOf(e.name, e.id, e.author, e.descEn, e.descRu, e.tags.joinToString(" ")).any { it.contains(query.trim(), true) })
+            listOf(e.name, e.meta.titleRu, e.meta.titleEn, e.id, e.author, e.descEn, e.descRu, e.tags.joinToString(" ")).any { it.contains(query.trim(), true) })
     }
     ScrollColumn {
         TabHeader(stringResource(R.string.store_title)) {
@@ -194,20 +214,11 @@ fun StoreScreen(onBack: () -> Unit) {
         if (error.isNotEmpty()) Hint(error, MaterialTheme.colorScheme.error)
         if (!loading && error.isEmpty() && shown.isEmpty()) Hint(stringResource(R.string.store_empty))
         shown.forEach { e ->
-            val inst = installed[e.id]
-            val upd = inst != null && OtaCore.vcmp(e.version, inst.version) > 0
-            AppSectionCard(Modifier.clickable { selected = e }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(e.name + "  v" + e.version, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Hint(e.desc(ru))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (e.verified) StatusPill(stringResource(if (e.official) R.string.store_official else R.string.store_verified), MaterialTheme.colorScheme.primary)
-                    else StatusPill(stringResource(R.string.store_unverified), MaterialTheme.colorScheme.error)
-                    if (upd) StatusPill(stringResource(R.string.store_update_avail, inst!!.version), MaterialTheme.colorScheme.tertiary)
-                    else if (inst != null) StatusPill(stringResource(R.string.store_installed_ver, inst.version), MaterialTheme.colorScheme.secondary)
-                }
-            }
+            val inst = installed[e.id]?.takeIf { it.sourceId == e.sourceId }
+            StoreCard(e.title(ru), e.desc(ru), e.meta, e.version, e.author, Modifier.clickable { selected = e }) { fg -> entryBadges(e, inst, fg) }
         }
         if (message.isNotBlank()) Hint(message, MaterialTheme.colorScheme.error)
+        BigButton(stringResource(R.string.store_sources), Icons.Default.Dns, onClick = { showSources = true })
         BigButton(stringResource(R.string.store_from_file), Icons.Default.FileOpen, loading = busy,
             onClick = { picker.launch(arrayOf("*/*")) })
         BigButton(stringResource(R.string.store_submit), Icons.Default.Upload, onClick = {
@@ -215,5 +226,85 @@ fun StoreScreen(onBack: () -> Unit) {
         })
         Hint(stringResource(R.string.store_submit_hint))
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+/** Sources screen: the built-in official catalog plus community repositories (URL + optional author key). */
+@Composable
+fun SourcesScreen(onClose: () -> Unit) {
+    val stored by AppSettings.storeSources.flow.collectAsStateWithLifecycle()
+    val list = remember(stored) { StoreManager.sources() }
+    var adding by remember { mutableStateOf(false) }
+    var removing by remember { mutableStateOf<StoreSource?>(null) }
+    ScrollColumn {
+        TabHeader(stringResource(R.string.store_sources))
+        Hint(stringResource(R.string.store_sources_hint))
+        list.forEach { s ->
+            AppSectionCard(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(if (s.official) stringResource(R.string.store_src_official) else s.name,
+                            style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                        Hint(s.url)
+                    }
+                    if (!s.official) IconButton({ removing = s }) { Icon(Icons.Default.Delete, stringResource(R.string.store_delete)) }
+                }
+                if (s.official) StatusPill(stringResource(R.string.store_src_builtin), MaterialTheme.colorScheme.primary)
+                else if (s.hasKey) StatusPill(stringResource(R.string.store_src_key, s.keyHex!!.take(12)), MaterialTheme.colorScheme.secondary)
+                else StatusPill(stringResource(R.string.store_src_nokey), MaterialTheme.colorScheme.error)
+            }
+        }
+        BigButton(stringResource(R.string.store_src_add), Icons.Default.Add, onClick = { adding = true })
+        BigButton(stringResource(R.string.ota_close), Icons.Default.Close, onClick = onClose)
+    }
+    if (adding) AddSourceDialog(onDismiss = { adding = false }, onAdded = {
+        adding = false; Thread({ StoreManager.refresh() }, "store-refresh").start()
+    })
+    removing?.let { s ->
+        AlertDialog(onDismissRequest = { removing = null }, title = { Text(s.name) },
+            text = { Text(stringResource(R.string.store_src_remove_text)) },
+            confirmButton = { TextButton({ StoreManager.removeSource(s.id); removing = null }) { Text(stringResource(R.string.store_delete)) } },
+            dismissButton = { TextButton({ removing = null }) { Text(stringResource(R.string.ota_cancel)) } })
+    }
+}
+
+@Composable
+private fun AddSourceDialog(onDismiss: () -> Unit, onAdded: () -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    var key by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf(false) }
+    var ack by remember { mutableStateOf(false) }
+    var err by remember { mutableStateOf("") }
+    val errUrl = stringResource(R.string.store_src_err_url)
+    val errKey = stringResource(R.string.store_src_err_key)
+    if (!confirm) {
+        AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.store_src_add)) }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it }, singleLine = true, label = { Text(stringResource(R.string.store_src_name)) })
+                OutlinedTextField(url, { url = it }, singleLine = true, label = { Text("index.json (https)") })
+                OutlinedTextField(key, { key = it }, label = { Text(stringResource(R.string.store_src_key_field)) })
+                if (err.isNotEmpty()) Hint(err, MaterialTheme.colorScheme.error)
+            }
+        }, confirmButton = {
+            TextButton({
+                try { StoreMeta.newSource(name, url, key); err = ""; confirm = true }
+                catch (e: IllegalArgumentException) { err = if (e.message == "key") errKey else errUrl }
+            }) { Text(stringResource(R.string.store_src_next)) }
+        }, dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.ota_cancel)) } })
+    } else {
+        AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.store_warn_title)) }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(stringResource(R.string.store_src_warn), color = MaterialTheme.colorScheme.error)
+                if (key.isBlank()) Text(stringResource(R.string.store_src_warn_nokey), color = MaterialTheme.colorScheme.error)
+                Row(Modifier.clickable { ack = !ack }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(ack, { ack = it }); Text(stringResource(R.string.store_ack))
+                }
+            }
+        }, confirmButton = {
+            TextButton({ runCatching { StoreManager.addSource(name, url, key) }.onSuccess { onAdded() }.onFailure { confirm = false; err = errUrl } }, enabled = ack) {
+                Text(stringResource(R.string.store_src_add))
+            }
+        }, dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.ota_cancel)) } })
     }
 }
