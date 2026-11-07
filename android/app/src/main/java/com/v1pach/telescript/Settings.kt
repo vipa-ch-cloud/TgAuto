@@ -73,7 +73,16 @@ object AppSettings {
 
     // Updates (OTA) and script store
     val otaAutoCheck = Pref("ota_auto_check", true)
-    val otaAutoApply = Pref("ota_auto_apply", false)
+    /** Download and apply OTA automatically: default ON, but only for packages signed by the official key (community keys never auto-apply). */
+    val otaAutoApply = Pref("ota_auto_apply", true)
+    /** Community OTA signer keys the user trusts (JSON array of {name,key}). */
+    val otaTrustedKeys = Pref("ota_trusted_keys", "[]")
+    /** Last OTA/APK update events, newline separated, newest last. */
+    val otaLog = Pref("ota_log", "")
+    /** APK self-update: off | notify | download | auto. */
+    val apkMode = Pref("apk_update_mode", "notify")
+    val apkLastCheck = Pref("apk_last_check", "0")
+    val apkNotified = Pref("apk_notified", "")
     val otaLastCheck = Pref("ota_last_check", "0")
     val otaNotified = Pref("ota_notified", "")
     val storeAutoUpdate = Pref("store_auto_update", false)

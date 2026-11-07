@@ -12,7 +12,11 @@ import java.util.zip.ZipFile
 class OtaException(val code: String, val detail: String = "") : Exception(if (detail.isEmpty()) code else "$code: $detail")
 
 /** A verified package. [signed] is false only for .tgascript files without a signature. */
-class OtaPackage(val manifest: JSONObject, val files: Map<String, ByteArray>, val signed: Boolean) {
+class OtaPackage(val manifest: JSONObject, val files: Map<String, ByteArray>, val signed: Boolean,
+                 /** Raw public key of a community signer; null when signed by the official key (or unsigned script). */
+                 val communityKey: ByteArray? = null) {
+    /** True only for the official key. Community-signed packages are never official/verified. */
+    val official: Boolean get() = signed && communityKey == null
     val format: String get() = manifest.getString("format")
     val isScript: Boolean get() = format == OtaCore.SCRIPT_FORMAT
     val version: String get() = manifest.getString("version")
@@ -145,7 +149,8 @@ object OtaCore {
      * A null [publicKey] (script packages from a keyless community source) means a signature cannot be
      * checked, so it is ignored and the package counts as unsigned.
      */
-    fun verify(file: File, publicKey: ByteArray?, baseName: String, baseCode: Int, flavor: String, expect: String? = null): OtaPackage {
+    fun verify(file: File, publicKey: ByteArray?, baseName: String, baseCode: Int, flavor: String, expect: String? = null,
+               extraKeys: List<ByteArray> = emptyList()): OtaPackage {
         if (file.length() > MAX_PACKAGE) throw OtaException("too_big", "package")
         val zf = try { ZipFile(file) } catch (e: Exception) { throw OtaException("not_zip", e.message.orEmpty()) }
         zf.use { z ->
@@ -167,14 +172,21 @@ object OtaCore {
             val manifest = try { JSONObject(mb.toString(Charsets.UTF_8)) } catch (e: Exception) { throw OtaException("bad_manifest", "json") }
             val fmt = manifest.optString("format")
             if ((fmt != OTA_FORMAT && fmt != SCRIPT_FORMAT) || (expect != null && fmt != expect)) throw OtaException("bad_format")
-            val signed = SIGNATURE in names && publicKey != null
+            var community: ByteArray? = null
+            val signed = SIGNATURE in names && (publicKey != null || (fmt == OTA_FORMAT && extraKeys.isNotEmpty()))
             if (!signed && fmt == OTA_FORMAT) throw OtaException("unsigned")
             if (signed) {
                 val sigEntry = z.getEntry(SIGNATURE)!!
                 if (sigEntry.size > 512) throw OtaException("bad_signature")
                 val sig = b64(readBounded(z, SIGNATURE, sigEntry.size))
                 val magic = if (fmt == OTA_FORMAT) MAGIC_OTA else MAGIC_SCRIPT
-                if (sig == null || !Ed25519.verify(publicKey!!, magic + mb, sig)) throw OtaException("bad_signature")
+                if (sig == null) throw OtaException("bad_signature")
+                val msg = magic + mb
+                if (publicKey == null || !Ed25519.verify(publicKey, msg, sig)) {
+                    // Only trusted community keys the user added; the official key is tried first and is never replaced.
+                    community = extraKeys.firstOrNull { it.size == 32 && !it.contentEquals(publicKey) && Ed25519.verify(it, msg, sig) }
+                        ?: throw OtaException("bad_signature")
+                }
             }
             validateManifest(manifest)
             checkBase(manifest, baseName, baseCode, flavor)
@@ -191,7 +203,7 @@ object OtaCore {
                 data[p] = blob
             }
             data[RES_STRINGS]?.let { runCatching { JSONObject(it.toString(Charsets.UTF_8)) }.getOrElse { throw OtaException("bad_manifest", RES_STRINGS) } }
-            return OtaPackage(manifest, data, signed)
+            return OtaPackage(manifest, data, signed, community)
         }
     }
 

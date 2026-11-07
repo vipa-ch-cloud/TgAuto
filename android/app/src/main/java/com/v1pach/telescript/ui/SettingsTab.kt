@@ -113,6 +113,9 @@ fun SettingsTab() {
         }
 
         OtaSection()
+        ApkUpdateSection()
+        TrustedKeysSection()
+        OtaLog()
 
         AppSectionCard {
             SectionHeader(Icons.Default.Info, stringResource(R.string.settings_about))

@@ -125,8 +125,32 @@ object OtaManager {
     }
 
     // ---- install / reset ----
+    fun trustedKeys(): List<TrustedKey> = TrustedKeys.parse(AppSettings.otaTrustedKeys.value)
+
+    /** Manual install path: official key first, then the user's community keys (the UI then shows a warning). */
     fun verifyFile(file: File): OtaPackage = OtaCore.verify(file, OtaKeys.publicKey, BuildConfig.VERSION_NAME,
+        BuildConfig.VERSION_CODE, BuildConfig.FLAVOR, OtaCore.OTA_FORMAT, trustedKeys().map { it.raw })
+
+    /** Automatic path: official key only. */
+    fun verifyOfficial(file: File): OtaPackage = OtaCore.verify(file, OtaKeys.publicKey, BuildConfig.VERSION_NAME,
         BuildConfig.VERSION_CODE, BuildConfig.FLAVOR, OtaCore.OTA_FORMAT)
+
+    fun addTrustedKey(name: String, keyText: String) {
+        AppSettings.otaTrustedKeys.set(TrustedKeys.serialize(TrustedKeys.add(trustedKeys(), name, keyText, OtaKeys.publicKey)))
+    }
+
+    fun removeTrustedKey(keyHex: String) {
+        AppSettings.otaTrustedKeys.set(TrustedKeys.serialize(TrustedKeys.remove(trustedKeys(), keyHex)))
+    }
+
+    /** Author name for a community-signed package (the label the user gave the key). */
+    fun communityAuthor(pkg: OtaPackage): String? = pkg.communityKey?.let { k -> trustedKeys().firstOrNull { it.raw.contentEquals(k) }?.name }
+
+    fun log(msg: String) {
+        val t = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date())
+        val lines = (AppSettings.otaLog.value.lines().filter { it.isNotBlank() } + "$t $msg").takeLast(30)
+        AppSettings.otaLog.set(lines.joinToString("\n"))
+    }
 
     private fun dirName(version: String) = version.replace(Regex("[^A-Za-z0-9._-]"), "_")
 
@@ -234,28 +258,40 @@ object OtaManager {
         return f
     }
 
-    /** Launch-time check. Notifies; applies only if auto-apply is on and verification passes. */
+    /**
+     * Launch-time check (at most every 6 h). With auto-apply on (default) the package is downloaded, verified
+     * against the OFFICIAL key only (community-signed packages are never applied automatically), installed
+     * as an overlay and rolled back by the boot guard if it fails to start twice. Otherwise only notifies.
+     */
     fun autoCheck() {
         if (!AppSettings.otaAutoCheck.value) return
         val now = System.currentTimeMillis()
         if (now - (AppSettings.otaLastCheck.value.toLongOrNull() ?: 0) < 6 * 3600_000L) return
         AppSettings.otaLastCheck.set(now.toString())
-        val r = runCatching { checkGithub() }.getOrNull() ?: return
+        val r = try { checkGithub() } catch (e: Throwable) { log("OTA check failed: ${e.message}"); return }
+        if (r == null) { log("OTA: up to date (${installedVersion()})"); return }
         if (AppSettings.otaAutoApply.value) {
-            val ok = runCatching { install(verifyFile(download(r.url))) }.isSuccess
-            notify(app.getString(if (ok) R.string.ota_notif_applied else R.string.ota_notif_failed, r.version), 7001)
+            try {
+                val name = install(verifyOfficial(download(r.url)))
+                log("OTA ${r.version} downloaded, verified (official key) and installed -> $name; applies at next start")
+                notify(app.getString(R.string.ota_notif_applied, r.version), 7001)
+            } catch (e: Throwable) {
+                log("OTA ${r.version} rejected: ${errorText(e)}")
+                notify(app.getString(R.string.ota_notif_failed, r.version), 7001)
+            }
         } else if (AppSettings.otaNotified.value != r.version) {
             AppSettings.otaNotified.set(r.version)
+            log("OTA ${r.version} available (not applied automatically)")
             notify(app.getString(R.string.ota_notif_available, r.version), 7001)
         }
     }
 
-    fun notify(text: String, id: Int) {
+    fun notify(text: String, id: Int, intent: Intent? = null) {
         if (Build.VERSION.SDK_INT >= 33 &&
             app.checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) return
         val nm = app.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel("updates", app.getString(R.string.ota_channel), NotificationManager.IMPORTANCE_LOW))
-        val pi = PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        val pi = PendingIntent.getActivity(app, id, intent ?: Intent(app, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         nm.notify(id, NotificationCompat.Builder(app, "updates").setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(app.getString(R.string.app_name)).setContentText(text).setContentIntent(pi).setAutoCancel(true).build())
     }

@@ -94,6 +94,8 @@ class OtaInstallActivity : ComponentActivity() {
         val ru = Str.isRu()
         val change = m.optString(if (ru) "changelog_ru" else "changelog_en").ifBlank { m.optString("changelog_en") }
         var busy by remember { mutableStateOf(false) }
+        val community = pkg.communityKey
+        var accepted by remember { mutableStateOf(false) }
         ScrollColumn {
             TabHeader(stringResource(R.string.ota_install_title))
             AppSectionCard {
@@ -103,11 +105,18 @@ class OtaInstallActivity : ComponentActivity() {
                 Hint(stringResource(R.string.ota_field_base, baseText(m)))
                 Hint(stringResource(R.string.ota_field_installed, OtaManager.installedVersion()))
                 Hint(stringResource(R.string.ota_field_files, pkg.files.size, pkg.files.keys.joinToString().take(300)))
-                Hint(stringResource(R.string.ota_sig_ok), MaterialTheme.colorScheme.primary)
+                if (community == null) Hint(stringResource(R.string.ota_sig_ok), MaterialTheme.colorScheme.primary)
+                else {
+                    val author = OtaManager.communityAuthor(pkg).orEmpty()
+                    Text(stringResource(R.string.ota_community_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                    Hint(stringResource(R.string.ota_community_text, author, TrustedKeys.fingerprint(community)), MaterialTheme.colorScheme.error)
+                    Hint(stringResource(R.string.ota_sig_community, author))
+                    SwitchRow(stringResource(R.string.ota_community_confirm), null, accepted) { accepted = it }
+                }
                 if (change.isNotBlank()) { Text(stringResource(R.string.ota_changelog), color = MaterialTheme.colorScheme.onSurface); Hint(change) }
             }
             Hint(stringResource(R.string.ota_restart_note))
-            BigButton(stringResource(R.string.ota_install), Icons.Default.SystemUpdate, loading = busy, onClick = {
+            BigButton(stringResource(R.string.ota_install), Icons.Default.SystemUpdate, loading = busy, enabled = community == null || accepted, onClick = {
                 busy = true
                 Thread({
                     state = try { OtaManager.install(pkg); UiState.Done(Str.get(R.string.ota_installed_restart, pkg.version)) }

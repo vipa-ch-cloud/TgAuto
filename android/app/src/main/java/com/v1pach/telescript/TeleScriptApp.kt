@@ -13,6 +13,7 @@ class TeleScriptApp : Application() {
         AppSettings.init(this)
         LlmBridge.init(this)
         Providers.init(this)
+        com.v1pach.telescript.ota.ApkUpdater.init(this)
         OtaManager.init(this) // boot guard + strings overlay, before anything imports OTA-able code
         if (!Python.isStarted()) Python.start(AndroidPlatform(this))
         runCatching { OtaManager.applyPythonPath() }
@@ -22,6 +23,7 @@ class TeleScriptApp : Application() {
         Thread({
             if (runCatching { Py.host }.isSuccess) OtaManager.confirmBoot()
             runCatching { OtaManager.autoCheck() }
+            runCatching { com.v1pach.telescript.ota.ApkUpdater.autoCheck() }
             runCatching { StoreManager.autoCheck() }
         }, "py-warmup").start()
     }
