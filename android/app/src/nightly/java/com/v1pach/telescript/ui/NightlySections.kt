@@ -23,6 +23,7 @@ private fun SectionLabel(text: String) {
 @Composable
 fun FlavorTopSection() {
     var open by remember { mutableStateOf(false) }
+    val crt by ConsoleSession.crt.flow.collectAsStateWithLifecycle()
     val installed = remember { LlmBridge.termuxInstalled() }
     val granted = remember { LlmBridge.hasPermission() }
     SectionLabel(stringResource(R.string.sec_cli))
@@ -35,6 +36,7 @@ fun FlavorTopSection() {
             StatusPill(stringResource(if (granted) R.string.cli_perm_ok else R.string.cli_perm_no),
                 if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
         }
+        SwitchRow(stringResource(R.string.console_crt), stringResource(R.string.console_crt_hint), crt) { ConsoleSession.crt.set(it) }
         BigButton(stringResource(R.string.cli_open), Icons.Default.Terminal, onClick = { open = true })
     }
     if (open) ConsoleOverlay { open = false }

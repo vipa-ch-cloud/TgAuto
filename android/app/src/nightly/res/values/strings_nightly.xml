@@ -20,6 +20,7 @@
     <string name="console_running">running…</string>
     <string name="console_q_claude">check claude</string>
     <string name="console_crt">CRT effect</string>
+    <string name="console_crt_hint">Scanlines, RGB pixel grid and soft glow on the console. Static, no battery cost.</string>
     <string name="console_q_gemini">check gemini</string>
     <string name="console_q_codex">check codex</string>
     <string name="console_q_node">node versions</string>

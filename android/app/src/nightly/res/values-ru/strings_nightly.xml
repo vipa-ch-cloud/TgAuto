@@ -20,6 +20,7 @@
     <string name="console_running">выполняется…</string>
     <string name="console_q_claude">проверить claude</string>
     <string name="console_crt">CRT-эффект</string>
+    <string name="console_crt_hint">Строки развёртки, RGB-сетка пикселей и мягкое свечение в консоли. Статично, без нагрузки на батарею.</string>
     <string name="console_q_gemini">проверить gemini</string>
     <string name="console_q_codex">проверить codex</string>
     <string name="console_q_node">версии node</string>
