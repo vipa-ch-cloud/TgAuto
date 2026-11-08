@@ -15,7 +15,7 @@ from pathlib import Path
 
 REPO = "https://packages.termux.dev/apt/termux-main/"
 PREFIX = "data/data/com.termux/files/usr"
-ROOTS = ["bash", "busybox", "curl", "git", "python", "python-pip", "nodejs-lts", "ca-certificates", "less"]
+ROOTS = ["bash", "busybox", "curl", "git", "python", "python-pip", "nodejs-lts", "npm", "ca-certificates", "less"]
 EXCLUDE = {"termux-tools", "termux-exec", "termux-core", "termux-am", "termux-am-socket", "termux-keyring",
            "dpkg", "apt", "termux-licenses"}
 SYSTEM_LIBS = {"libc.so", "libm.so", "libdl.so", "liblog.so", "libandroid.so", "libstdc++.so", "libEGL.so",
@@ -65,9 +65,10 @@ def closure(pk, roots):
             return
         seen.append(n)
         for dep in pk[n].get("Depends", "").split(","):
-            dep = dep.strip().split("|")[0].strip().split(" ")[0]
-            if dep:
-                add(dep)
+            alts = [a.strip().split(" ")[0] for a in dep.split("|") if a.strip()]
+            if not alts or any(a in seen or a in roots for a in alts):
+                continue  # an alternative (npm: nodejs | nodejs-lts) is already selected
+            add(alts[0])
     for r in roots:
         add(r)
     return seen
