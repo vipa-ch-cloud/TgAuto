@@ -74,7 +74,7 @@ object DexCore {
 
     private fun b64(s: ByteArray): ByteArray? = try { Base64.getDecoder().decode(String(s).trim()) } catch (e: Exception) { null }
 
-    fun verify(file: File, publicKey: ByteArray, baseName: String, flavor: String, extraKeys: List<ByteArray> = emptyList()): DexPackage {
+    fun verify(file: File, publicKey: ByteArray, baseName: String, flavor: String, extraKeys: List<ByteArray> = emptyList(), alsoOfficial: List<ByteArray> = emptyList()): DexPackage {
         if (file.length() > MAX_PACKAGE) throw OtaException("too_big", "package")
         val zf = try { ZipFile(file) } catch (e: Exception) { throw OtaException("not_zip", e.message.orEmpty()) }
         zf.use { z ->
@@ -100,8 +100,9 @@ object DexCore {
             val sig = b64(readBounded(z, SIGNATURE, se.size)) ?: throw OtaException("bad_signature")
             val msg = MAGIC + mb
             var community: ByteArray? = null
-            if (!Ed25519.verify(publicKey, msg, sig)) {
-                community = extraKeys.firstOrNull { it.size == 32 && !it.contentEquals(publicKey) && Ed25519.verify(it, msg, sig) }
+            if (!Ed25519.verify(publicKey, msg, sig) && alsoOfficial.none { Ed25519.verify(it, msg, sig) }) {
+                community = extraKeys.firstOrNull { k -> k.size == 32 && !k.contentEquals(publicKey) &&
+                    alsoOfficial.none { it.contentEquals(k) } && Ed25519.verify(k, msg, sig) }
                     ?: throw OtaException("bad_signature")
             }
             validateManifest(manifest)

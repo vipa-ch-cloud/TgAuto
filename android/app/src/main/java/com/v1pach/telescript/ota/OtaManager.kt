@@ -129,14 +129,14 @@ object OtaManager {
 
     /** Manual install path: official key first, then the user's community keys (the UI then shows a warning). */
     fun verifyFile(file: File): OtaPackage = OtaCore.verify(file, OtaKeys.publicKey, BuildConfig.VERSION_NAME,
-        BuildConfig.VERSION_CODE, BuildConfig.FLAVOR, OtaCore.OTA_FORMAT, trustedKeys().map { it.raw })
+        BuildConfig.VERSION_CODE, BuildConfig.FLAVOR, OtaCore.OTA_FORMAT, trustedKeys().map { it.raw }, OtaKeys.alsoOfficial)
 
-    /** Automatic path: official key only. */
+    /** Automatic path: official keys only. */
     fun verifyOfficial(file: File): OtaPackage = OtaCore.verify(file, OtaKeys.publicKey, BuildConfig.VERSION_NAME,
-        BuildConfig.VERSION_CODE, BuildConfig.FLAVOR, OtaCore.OTA_FORMAT)
+        BuildConfig.VERSION_CODE, BuildConfig.FLAVOR, OtaCore.OTA_FORMAT, alsoOfficial = OtaKeys.alsoOfficial)
 
     fun addTrustedKey(name: String, keyText: String) {
-        AppSettings.otaTrustedKeys.set(TrustedKeys.serialize(TrustedKeys.add(trustedKeys(), name, keyText, OtaKeys.publicKey)))
+        AppSettings.otaTrustedKeys.set(TrustedKeys.serialize(TrustedKeys.add(trustedKeys(), name, keyText, OtaKeys.all)))
     }
 
     fun removeTrustedKey(keyHex: String) {

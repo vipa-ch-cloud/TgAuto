@@ -138,7 +138,7 @@ fun TrustedKeysSection() {
     AppSectionCard {
         SectionHeader(Icons.Default.VpnKey, stringResource(R.string.ota_trusted_title))
         Hint(stringResource(R.string.ota_trusted_hint))
-        Hint(stringResource(R.string.ota_trusted_official, TrustedKeys.fingerprint(OtaKeys.publicKey)))
+        OtaKeys.all.forEach { Hint(stringResource(R.string.ota_trusted_official, TrustedKeys.fingerprint(it))) }
         if (keys.isEmpty()) Hint(stringResource(R.string.ota_trusted_none))
         keys.forEach { k ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

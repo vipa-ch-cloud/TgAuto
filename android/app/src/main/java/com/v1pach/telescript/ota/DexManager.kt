@@ -78,10 +78,11 @@ object DexManager {
 
     // ---- verification ----
     fun verifyFile(file: File): DexPackage = DexCore.verify(file, OtaKeys.publicKey, BuildConfig.VERSION_NAME, BuildConfig.FLAVOR,
-        OtaManager.trustedKeys().map { it.raw })
+        OtaManager.trustedKeys().map { it.raw }, OtaKeys.alsoOfficial)
 
-    /** Automatic path: official key only. */
-    fun verifyOfficial(file: File): DexPackage = DexCore.verify(file, OtaKeys.publicKey, BuildConfig.VERSION_NAME, BuildConfig.FLAVOR)
+    /** Automatic path: official keys only. */
+    fun verifyOfficial(file: File): DexPackage = DexCore.verify(file, OtaKeys.publicKey, BuildConfig.VERSION_NAME, BuildConfig.FLAVOR,
+        alsoOfficial = OtaKeys.alsoOfficial)
 
     private fun dirName(v: String) = v.replace(Regex("[^A-Za-z0-9._-]"), "_")
 
@@ -147,7 +148,7 @@ object DexManager {
             val official = isOfficial(name) ?: false
             // A community package only loads while its key is still in the user's trusted list.
             val pkg = DexCore.verify(File(root, "$name/package.tgadex"), OtaKeys.publicKey, BuildConfig.VERSION_NAME, BuildConfig.FLAVOR,
-                if (official) emptyList() else OtaManager.trustedKeys().map { it.raw })
+                if (official) emptyList() else OtaManager.trustedKeys().map { it.raw }, OtaKeys.alsoOfficial)
             val dir = File(app.codeCacheDir, "tgadex")
             dir.deleteRecursively(); dir.mkdirs()
             val paths = pkg.dex.entries.sortedBy { it.key }.map { (p, bytes) ->

@@ -150,7 +150,7 @@ object OtaCore {
      * checked, so it is ignored and the package counts as unsigned.
      */
     fun verify(file: File, publicKey: ByteArray?, baseName: String, baseCode: Int, flavor: String, expect: String? = null,
-               extraKeys: List<ByteArray> = emptyList()): OtaPackage {
+               extraKeys: List<ByteArray> = emptyList(), alsoOfficial: List<ByteArray> = emptyList()): OtaPackage {
         if (file.length() > MAX_PACKAGE) throw OtaException("too_big", "package")
         val zf = try { ZipFile(file) } catch (e: Exception) { throw OtaException("not_zip", e.message.orEmpty()) }
         zf.use { z ->
@@ -182,9 +182,12 @@ object OtaCore {
                 val magic = if (fmt == OTA_FORMAT) MAGIC_OTA else MAGIC_SCRIPT
                 if (sig == null) throw OtaException("bad_signature")
                 val msg = magic + mb
-                if (publicKey == null || !Ed25519.verify(publicKey, msg, sig)) {
-                    // Only trusted community keys the user added; the official key is tried first and is never replaced.
-                    community = extraKeys.firstOrNull { it.size == 32 && !it.contentEquals(publicKey) && Ed25519.verify(it, msg, sig) }
+                val official = (publicKey != null && Ed25519.verify(publicKey, msg, sig)) ||
+                    (publicKey != null && alsoOfficial.any { Ed25519.verify(it, msg, sig) })
+                if (!official) {
+                    // Only trusted community keys the user added; the official keys are tried first and are never replaced.
+                    community = extraKeys.firstOrNull { k -> k.size == 32 && !(publicKey?.contentEquals(k) ?: false) &&
+                        alsoOfficial.none { it.contentEquals(k) } && Ed25519.verify(k, msg, sig) }
                         ?: throw OtaException("bad_signature")
                 }
             }

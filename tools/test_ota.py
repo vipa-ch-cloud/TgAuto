@@ -131,6 +131,23 @@ class OtaTest(unittest.TestCase):
         r = c.verify_package(self.f, self.pub, "1.9.0", 20, "stable", extra_keys=[raw_pub(other)], want_signer=True)
         self.assertIsNone(r[3])  # official signer wins
 
+    def test_two_official_keys(self):
+        import verify_ota as vo
+        self.assertEqual(len(vo.APP_PUBLIC_KEYS_HEX), 2)
+        k2 = Ed25519PrivateKey.generate()
+        build(self.f, k2, {"python/x.py": b"1"})
+        # either official key verifies as official (signer None), the unrelated one is rejected
+        run = lambda k: c.verify_package(self.f, k, "1.9.0", 20, "stable", want_signer=True)
+        orig = vo.APP_PUBLIC_KEYS_HEX
+        try:
+            vo.APP_PUBLIC_KEYS_HEX = (raw_pub(Ed25519PrivateKey.generate()).hex(), raw_pub(k2).hex())
+            self.assertIsNone(vo.verify_official(run)[3])
+            vo.APP_PUBLIC_KEYS_HEX = (raw_pub(Ed25519PrivateKey.generate()).hex(),)
+            with self.assertRaises(c.OtaError):
+                vo.verify_official(run)
+        finally:
+            vo.APP_PUBLIC_KEYS_HEX = orig
+
     def test_gen_key_tool(self):
         out = os.path.join(self.dir, "g.pem")
         r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "gen_ota_key.py"), "--out", out], capture_output=True, text=True)

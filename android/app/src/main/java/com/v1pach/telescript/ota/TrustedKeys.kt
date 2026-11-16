@@ -35,11 +35,11 @@ object TrustedKeys {
     }
 
     /** Adds a key. Throws IllegalArgumentException with code "key", "name", "official", "dup", "limit". */
-    fun add(list: List<TrustedKey>, name: String, keyText: String, official: ByteArray): List<TrustedKey> {
+    fun add(list: List<TrustedKey>, name: String, keyText: String, official: List<ByteArray>): List<TrustedKey> {
         val raw = parseKey(keyText) ?: throw IllegalArgumentException("key")
         val n = name.trim().take(60)
         if (n.isEmpty()) throw IllegalArgumentException("name")
-        if (raw.contentEquals(official)) throw IllegalArgumentException("official")
+        if (official.any { raw.contentEquals(it) }) throw IllegalArgumentException("official")
         val hex = raw.joinToString("") { "%02x".format(it) }
         if (list.any { it.keyHex == hex }) throw IllegalArgumentException("dup")
         if (list.size >= MAX_KEYS) throw IllegalArgumentException("limit")

@@ -118,7 +118,8 @@ object StoreManager {
         val data = OtaManager.http(s.url, 4L * 1024 * 1024)
         if (s.hasKey) {
             val sig = OtaManager.http(s.url + ".sig", 4096)
-            if (!OtaCore.verifyIndex(data, sig, OtaCore.hex(s.keyHex!!))) throw OtaException("bad_signature", "index.json")
+            val keys = if (s.official) OtaKeys.all else listOf(OtaCore.hex(s.keyHex!!))
+            if (keys.none { OtaCore.verifyIndex(data, sig, it) }) throw OtaException("bad_signature", "index.json")
         }
         val j = JSONObject(String(data, Charsets.UTF_8))
         if (j.optString("format") != OtaCore.INDEX_FORMAT) throw OtaException("bad_format", "index")
@@ -131,8 +132,8 @@ object StoreManager {
 
     // ---- preparing a package ----
     /** Local files are checked with the official key (a present signature must match it); a community source with its own key uses that key, a keyless one has no signature check. */
-    private fun verifyScript(file: File, key: ByteArray? = OtaKeys.publicKey): OtaPackage = OtaCore.verify(file, key, BuildConfig.VERSION_NAME,
-        BuildConfig.VERSION_CODE, BuildConfig.FLAVOR, OtaCore.SCRIPT_FORMAT)
+    private fun verifyScript(file: File, key: ByteArray? = OtaKeys.publicKey, alsoOfficial: List<ByteArray> = OtaKeys.alsoOfficial): OtaPackage = OtaCore.verify(file, key, BuildConfig.VERSION_NAME,
+        BuildConfig.VERSION_CODE, BuildConfig.FLAVOR, OtaCore.SCRIPT_FORMAT, alsoOfficial = alsoOfficial)
 
     /** Local .tgascript file. Never trusted as verified. */
     fun fromFile(file: File): Candidate {
@@ -149,7 +150,7 @@ object StoreManager {
         tmp.writeBytes(blob)
         val src = source(e.sourceId) ?: throw OtaException("bad_manifest", "source")
         val key = if (src.official) OtaKeys.publicKey else src.keyHex?.let { OtaCore.hex(it) }
-        val pkg = try { verifyScript(tmp, key) } finally { tmp.delete() }
+        val pkg = try { verifyScript(tmp, key, if (src.official) OtaKeys.alsoOfficial else emptyList()) } finally { tmp.delete() }
         if (pkg.manifest.getString("id") != e.id || pkg.version != e.version) throw OtaException("bad_manifest", "id/version")
         return Candidate(pkg, e.sha256, ScriptScan.scan(pkg.files), e, "store")
     }

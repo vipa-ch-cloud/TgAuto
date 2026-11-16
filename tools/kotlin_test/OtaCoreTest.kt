@@ -76,11 +76,11 @@ fun main(args: Array<String>) {
     val b64 = java.util.Base64.getEncoder().encodeToString(comm)
     check("parseKey hex/b64/prefix", TrustedKeys.parseKey(hexComm)!!.contentEquals(comm) && TrustedKeys.parseKey(b64)!!.contentEquals(comm) &&
         TrustedKeys.parseKey("ed25519:" + hexComm.uppercase())!!.contentEquals(comm) && TrustedKeys.parseKey("zz") == null && TrustedKeys.parseKey("abcd") == null)
-    fun addCode(l: List<TrustedKey>, n: String, k: String) = try { TrustedKeys.add(l, n, k, pub); "ok" } catch (e: IllegalArgumentException) { e.message }
+    fun addCode(l: List<TrustedKey>, n: String, k: String) = try { TrustedKeys.add(l, n, k, listOf(pub)); "ok" } catch (e: IllegalArgumentException) { e.message }
     check("add official refused", addCode(emptyList(), "x", pub.joinToString("") { "%02x".format(it) }) == "official")
     check("add bad/name/dup", addCode(emptyList(), "x", "nope") == "key" && addCode(emptyList(), " ", hexComm) == "name" &&
-        addCode(TrustedKeys.add(emptyList(), "a", hexComm, pub), "b", b64) == "dup")
-    val lst = TrustedKeys.add(emptyList(), "Alice", hexComm, pub)
+        addCode(TrustedKeys.add(emptyList(), "a", hexComm, listOf(pub)), "b", b64) == "dup")
+    val lst = TrustedKeys.add(emptyList(), "Alice", hexComm, listOf(pub))
     check("serialize roundtrip + fingerprint", TrustedKeys.parse(TrustedKeys.serialize(lst)).let { it.size == 1 && it[0].name == "Alice" && it[0].fingerprint == OtaCore.sha256(comm) } &&
         TrustedKeys.parse("garbage").isEmpty() && TrustedKeys.remove(lst, hexComm).isEmpty())
     // --- APK update rules ---
