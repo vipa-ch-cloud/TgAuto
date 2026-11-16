@@ -42,4 +42,8 @@
     <string name="console_card_title">Console</string>
     <string name="console_card_hint">Shell with git, curl, python, node and the AI-CLIs claude, codex, gemini.</string>
     <string name="console_open_btn">Open console</string>
+    <string name="userland_diag_title">Userland diagnostics</string>
+    <string name="userland_repair">Repair userland</string>
+    <string name="userland_repair_ok">Userland reinstalled.</string>
+    <string name="userland_repair_fail">Repair failed. See the diagnostics above.</string>
 </resources>

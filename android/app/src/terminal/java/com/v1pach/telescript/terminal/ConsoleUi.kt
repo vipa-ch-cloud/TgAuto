@@ -39,6 +39,7 @@ import com.v1pach.telescript.R
 import com.v1pach.telescript.Str
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 private val MONO = FontFamily.Monospace
 
@@ -302,6 +303,7 @@ fun CliPanel(look: ConsoleLook, onLogin: (CliSpec) -> Unit) {
                 if (st.log.isNotBlank()) Text(st.log.takeLast(1500), color = look.dim, fontFamily = MONO, fontSize = 11.sp, lineHeight = 14.sp)
             }
         }
+        UserlandRepair(look)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.cli_proxy), color = look.fg, fontFamily = MONO, fontSize = 13.sp)
             BasicTextField(
@@ -321,4 +323,30 @@ private fun CliButton(look: ConsoleLook, label: String, enabled: Boolean, onClic
     Text(label, color = if (enabled) look.prompt else look.dim.copy(alpha = 0.5f), fontFamily = MONO, fontSize = 13.sp,
         modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(look.bg).clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp))
+}
+
+/** "Repair userland" button with a diagnostics block: wipes /usr (keeps home) and unpacks it again. */
+@Composable
+fun UserlandRepair(look: ConsoleLook) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var diag by remember { mutableStateOf("") }
+    var msg by remember { mutableStateOf("") }
+    LaunchedEffect(busy) { if (!busy) diag = withContext(Dispatchers.IO) { Userland.diagnostics(ctx) } }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(look.bar).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.userland_diag_title), color = look.fg, fontFamily = MONO, fontWeight = FontWeight.Bold)
+        Text(diag, color = look.dim, fontFamily = MONO, fontSize = 11.sp, lineHeight = 14.sp)
+        if (msg.isNotEmpty()) Text(msg, color = look.prompt, fontFamily = MONO, fontSize = 12.sp)
+        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = look.prompt, trackColor = look.bg)
+        CliButton(look, stringResource(R.string.userland_repair), !busy) {
+            busy = true; msg = ""
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) { Userland.repair(ctx) }
+                msg = Str.get(if (ok) R.string.userland_repair_ok else R.string.userland_repair_fail)
+                busy = false
+            }
+        }
+    }
 }

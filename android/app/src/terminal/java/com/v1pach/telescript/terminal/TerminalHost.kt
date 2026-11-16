@@ -57,7 +57,19 @@ object TerminalHost {
     fun home(): File = File(Paths.root, "home").also { it.mkdirs() }
 
     /** Opens a shell tab; [firstLine] (e.g. a login command) is typed once the shell starts. Never throws. */
-    fun newTab(firstLine: String? = null): TermTab? = runCatching {
+    fun newTab(firstLine: String? = null): TermTab? {
+        if (!Userland.ready(app) && Userland.supported(app) && android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            // Never unpack on the UI thread: prepare off-thread, then open the tab on the main thread.
+            Thread({
+                Userland.ensure(app)
+                android.os.Handler(android.os.Looper.getMainLooper()).post { openTab(firstLine) }
+            }, "tab-userland").start()
+            return null
+        }
+        return openTab(firstLine)
+    }
+
+    private fun openTab(firstLine: String?): TermTab? = runCatching {
         val useUserland = Userland.ready(app) || Userland.ensure(app)
         val s = if (useUserland) {
             val usr = Userland.prefix(app).absolutePath
@@ -74,8 +86,10 @@ object TerminalHost {
         tabs.add(tab)
         selected = tabs.lastIndex
         if (firstLine != null) Thread {
-            Thread.sleep(700)
-            runCatching { s.write(firstLine + "\n") }
+            // The shell starts when the view attaches the emulator: wait for that instead of a fixed delay.
+            val deadline = System.currentTimeMillis() + 10_000
+            while (s.emulator == null && s.isRunning && System.currentTimeMillis() < deadline) Thread.sleep(25)
+            if (s.emulator != null) runCatching { s.write(firstLine + "\n") }
         }.start()
         tab
     }.onFailure { error = "shell: $it" }.getOrNull()

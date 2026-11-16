@@ -42,4 +42,8 @@
     <string name="console_card_title">Консоль</string>
     <string name="console_card_hint">Оболочка с git, curl, python, node и ИИ-CLI claude, codex, gemini.</string>
     <string name="console_open_btn">Открыть консоль</string>
+    <string name="userland_diag_title">Диагностика среды</string>
+    <string name="userland_repair">Починить userland</string>
+    <string name="userland_repair_ok">Среда переустановлена.</string>
+    <string name="userland_repair_fail">Не удалось починить. Смотрите диагностику выше.</string>
 </resources>
