@@ -94,6 +94,12 @@ object AppSettings {
     /** Community catalog sources added by the user (JSON array; the official one is built in). */
     val storeSources = Pref("store_sources", "[]")
 
+    // Autostart / continuous operation
+    /** Global switch "keep scripts running": watchdog restarts, wake/wifi locks, sticky service. */
+    val keepAlive = Pref("keep_alive", false)
+    /** Ids of scripts with autostart on, newline separated. */
+    val autostartIds = Pref("autostart_ids", "")
+
     // Logs
     val logDebug = Pref("log_debug", false)
     val logInfo = Pref("log_info", true)

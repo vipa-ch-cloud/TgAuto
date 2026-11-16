@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="svc_retry">Скоро перезапуск: %1$s</string>
+    <string name="keep_log_restart">Скрипт остановился; перезапуск через %1$d с (попытка %2$d)</string>
+    <string name="keep_title">Автозапуск и непрерывная работа</string>
+    <string name="keep_switch">Держать скрипты непрерывно</string>
+    <string name="keep_switch_sub">Перезапускать скрипты с автозапуском при сбое, не давать засыпать процессору и Wi-Fi, переживать перезагрузку</string>
+    <string name="keep_status_guarded">Под присмотром: %1$d скрипт(ов)</string>
+    <string name="keep_status_none">Нет скриптов с включённым автозапуском</string>
+    <string name="keep_battery_ok">Оптимизация батареи для TgAuto отключена</string>
+    <string name="keep_battery_bad">Оптимизация батареи включена: система может убить скрипты</string>
+    <string name="keep_oem_title">%1$s: дополнительный шаг</string>
+    <string name="keep_oem_hint">Эта оболочка агрессивно убивает фоновые приложения. Разрешите TgAuto автозапуск и работу в фоне и закрепите приложение в списке недавних.</string>
+    <string name="keep_oem_btn">Открыть настройки автозапуска</string>
+    <string name="scripts_autostart">Автозапуск</string>
+    <string name="scripts_autostart_sub">Запускать при загрузке и после обновления</string>
+    <string name="scripts_retry_in">Перезапуск через %1$d с (попытка %2$d)</string>
+</resources>

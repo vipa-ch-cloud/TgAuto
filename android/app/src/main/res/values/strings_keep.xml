@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="svc_retry">Restarting soon: %1$s</string>
+    <string name="keep_log_restart">Script stopped; restart in %1$d s (attempt %2$d)</string>
+    <string name="keep_title">Autostart and keep-alive</string>
+    <string name="keep_switch">Keep scripts running</string>
+    <string name="keep_switch_sub">Restart scripts with autostart if they crash, hold the CPU and Wi-Fi awake, survive reboots</string>
+    <string name="keep_status_guarded">Under watch: %1$d script(s)</string>
+    <string name="keep_status_none">No scripts have autostart enabled</string>
+    <string name="keep_battery_ok">Battery optimization: disabled for TgAuto</string>
+    <string name="keep_battery_bad">Battery optimization is on: the system may kill scripts</string>
+    <string name="keep_oem_title">%1$s: extra step</string>
+    <string name="keep_oem_hint">This vendor kills background apps aggressively. Allow autostart and background activity for TgAuto, and lock the app in the recents list.</string>
+    <string name="keep_oem_btn">Open autostart settings</string>
+    <string name="scripts_autostart">Autostart</string>
+    <string name="scripts_autostart_sub">Start on boot and after updates</string>
+    <string name="scripts_retry_in">Restart in %1$d s (attempt %2$d)</string>
+</resources>

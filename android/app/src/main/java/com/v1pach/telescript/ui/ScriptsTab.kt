@@ -89,15 +89,7 @@ fun ScriptsTab(onOpenAccount: () -> Unit, onOpenLogs: () -> Unit) {
                     onClick = { context.startActivity(Intent(context, com.v1pach.telescript.store.StoreActivity::class.java)) })
             }
         }
-        if (!batteryOk) item {
-            AppSectionCard {
-                SectionHeader(Icons.Default.BatteryAlert, stringResource(R.string.scripts_background))
-                Hint(stringResource(R.string.scripts_battery_hint))
-                BigButton(stringResource(R.string.scripts_battery_btn), Icons.Default.BatterySaver, onClick = {
-                    requestIgnoreBattery(context)
-                })
-            }
-        }
+        item { KeepAliveCard(batteryOk) }
         if (tree.isNotEmpty() && problem.isEmpty() && scripts.isEmpty() && !scanning) item {
             AppSectionCard {
                 Hint(stringResource(R.string.scripts_empty))
@@ -144,6 +136,10 @@ private fun ScriptCard(
     onInstall: (List<String>) -> Unit,
 ) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.22f
+    val autoIds by AppSettings.autostartIds.flow.collectAsStateWithLifecycle()
+    val autostart = script.id in autoIds.split('\n')
+    val watches by KeepAlive.watch.collectAsStateWithLifecycle()
+    val retry = watches[script.id]
     val (label, color) = when (state.status) {
         RunStatus.RUNNING -> stringResource(R.string.scripts_status_running) to (if (dark) AppColors.connectedDark else AppColors.connected)
         RunStatus.STARTING -> stringResource(R.string.scripts_status_starting) to (if (dark) AppColors.warningDark else AppColors.warning)
@@ -181,6 +177,13 @@ private fun ScriptCard(
         if (state.status == RunStatus.ERROR && state.missingPackage.isNotBlank()) {
             BigButton(stringResource(R.string.scripts_install_pkg, state.missingPackage), Icons.Default.Download,
                 onClick = { onInstall(listOf(state.missingPackage)) }, loading = installing, enabled = !installing)
+        }
+        if (retry != null && retry.retryAt > 0L && state.status != RunStatus.RUNNING) {
+            val secs = ((retry.retryAt - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+            Hint(stringResource(R.string.scripts_retry_in, secs, retry.attempt))
+        }
+        SwitchRow(stringResource(R.string.scripts_autostart), stringResource(R.string.scripts_autostart_sub), autostart) {
+            KeepAlive.setAutostart(script.id, it)
         }
         val active = state.status == RunStatus.RUNNING || state.status == RunStatus.STARTING
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

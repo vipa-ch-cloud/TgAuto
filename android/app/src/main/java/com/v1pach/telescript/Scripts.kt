@@ -343,7 +343,8 @@ object ScriptManager {
         else -> null
     }
 
-    fun start(script: ScriptInfo) {
+    fun start(script: ScriptInfo, auto: Boolean = false) {
+        if (!auto) KeepAlive.userStart(script.id)
         val current = state(script.id).status
         if (current == RunStatus.RUNNING || current == RunStatus.STARTING || current == RunStatus.STOPPING) return
         set(script.id, ScriptState(RunStatus.STARTING, startedAt = System.currentTimeMillis()))
@@ -368,6 +369,7 @@ object ScriptManager {
     }
 
     fun stop(id: String) {
+        KeepAlive.userStop(id)
         val current = state(id).status
         if (current != RunStatus.RUNNING && current != RunStatus.STARTING) return
         set(id, state(id).copy(status = RunStatus.STOPPING))
