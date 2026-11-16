@@ -161,4 +161,13 @@ SHA-256: %2$s</string>
     <string name="ota_err_apk_package">APK для другого пакета или канала.</string>
     <string name="ota_err_apk_not_newer">APK не новее установленной версии.</string>
     <string name="ota_err_apk_cert">APK подписан другим сертификатом, чем установленное приложение. Отказ.</string>
+    <string name="ota_err_apk_perm">Нет разрешения на установку, поэтому ничего не скачано. Сначала разрешите «Установку неизвестных приложений».</string>
+    <string name="apk_notif_perm">Обновление APK готово, но установка неизвестных приложений не разрешена; нажмите, чтобы исправить.</string>
+    <string name="apk_channel">Обновления приложения (нужно действие)</string>
+    <string name="apk_install_title">Обновление приложения</string>
+    <string name="apk_ready_title">Готово к установке</string>
+    <string name="apk_none_ready">Скачанного обновления нет.</string>
+    <string name="apk_ready">Версия %1$s скачана и проверена.</string>
+    <string name="apk_install_btn">Установить %1$s</string>
+    <string name="apk_log_title">Последние попытки:</string>
 </resources>

@@ -41,6 +41,12 @@
             android:name=".store.StoreActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ota.ApkInstallActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop" />
+
         <!-- Opens .tgadyn (OTA) and .tgascript (script package) files; content:// and file://. -->
         <activity
             android:name=".ota.OtaInstallActivity"

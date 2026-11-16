@@ -161,4 +161,13 @@ SHA-256: %2$s</string>
     <string name="ota_err_apk_package">The APK is for a different package or channel.</string>
     <string name="ota_err_apk_not_newer">The APK is not newer than the installed version.</string>
     <string name="ota_err_apk_cert">The APK is signed with a different certificate than the installed app. Refused.</string>
+    <string name="ota_err_apk_perm">Install permission is missing, so nothing was downloaded. Allow "Install unknown apps" first.</string>
+    <string name="apk_notif_perm">APK update is ready but "Install unknown apps" is not allowed; tap to fix.</string>
+    <string name="apk_channel">App updates (action needed)</string>
+    <string name="apk_install_title">App update</string>
+    <string name="apk_ready_title">Ready to install</string>
+    <string name="apk_none_ready">No downloaded update is waiting.</string>
+    <string name="apk_ready">Version %1$s is downloaded and verified.</string>
+    <string name="apk_install_btn">Install %1$s</string>
+    <string name="apk_log_title">Last attempts:</string>
 </resources>

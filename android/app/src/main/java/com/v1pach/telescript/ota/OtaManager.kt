@@ -286,13 +286,16 @@ object OtaManager {
         }
     }
 
-    fun notify(text: String, id: Int, intent: Intent? = null) {
+    /** [important] uses the default-importance "apk_updates" channel (sound, heads-up) for things the user must act on. */
+    fun notify(text: String, id: Int, intent: Intent? = null, important: Boolean = false) {
         if (Build.VERSION.SDK_INT >= 33 &&
             app.checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) return
         val nm = app.getSystemService(NotificationManager::class.java)
+        val channel = if (important) "apk_updates" else "updates"
         nm.createNotificationChannel(NotificationChannel("updates", app.getString(R.string.ota_channel), NotificationManager.IMPORTANCE_LOW))
+        if (important) nm.createNotificationChannel(NotificationChannel("apk_updates", app.getString(R.string.apk_channel), NotificationManager.IMPORTANCE_DEFAULT))
         val pi = PendingIntent.getActivity(app, id, intent ?: Intent(app, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-        nm.notify(id, NotificationCompat.Builder(app, "updates").setSmallIcon(R.mipmap.ic_launcher)
+        nm.notify(id, NotificationCompat.Builder(app, channel).setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(app.getString(R.string.app_name)).setContentText(text).setContentIntent(pi).setAutoCancel(true).build())
     }
 }

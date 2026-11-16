@@ -32,6 +32,36 @@ object ApkUpdater {
     private const val ACTION = "com.v1pach.telescript.APK_INSTALL_RESULT"
     private val dir get() = File(app.cacheDir, "apk-update")
 
+    @Volatile private var lastInteractive = 0L
+    class Pending(val version: String, val file: File)
+
+    /** Appends to the "last attempt" log shown on the install screen (and to the general update log). */
+    private fun alog(msg: String) {
+        OtaManager.log(msg)
+        val t = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+        val lines = (AppSettings.apkAttemptLog.value.lines().filter { it.isNotBlank() } + "$t $msg").takeLast(25)
+        AppSettings.apkAttemptLog.set(lines.joinToString("\n"))
+    }
+
+    fun attemptLog(): String = AppSettings.apkAttemptLog.value
+
+    /** In-app install screen: tap target of every APK notification (starting an Activity from a tap is always allowed). */
+    fun screenIntent(): Intent = Intent(app, ApkInstallActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+    /** The verified APK waiting for install, or null. Re-checked on every call: a stale or already installed file is dropped. */
+    fun pending(): Pending? {
+        val raw = AppSettings.apkPending.value
+        if (raw.isBlank()) return null
+        val f = File(dir, raw.substringAfter('\t'))
+        val ok = f.isFile && runCatching {
+            val info = archiveInfo(f.absolutePath)!!
+            val mine = installedInfo()
+            ApkCore.checkIdentity(app.packageName, info.packageName, code(mine), code(info), certs(mine), certs(info)); true
+        }.getOrDefault(false)
+        if (!ok) { AppSettings.apkPending.set(""); return null }
+        return Pending(raw.substringBefore('\t'), f)
+    }
+
     @Volatile var progress: Float = -1f; private set
     @Volatile var ready: File? = null; private set
 
@@ -64,7 +94,11 @@ object ApkUpdater {
     /** Streams to a temp file with progress, then verifies. Blocking. Returns the verified APK. */
     fun download(r: ApkRelease, onProgress: (Float) -> Unit = {}): File {
         require(r.url.startsWith("https://")) { "https only" }
+        // the install permission is checked BEFORE spending traffic on a file that could not be installed
+        if (!canInstall()) { alog("APK ${r.version}: download skipped, install permission missing"); throw OtaException("apk_perm") }
+        alog("APK ${r.version}: download started")
         dir.deleteRecursively(); dir.mkdirs()
+        AppSettings.apkPending.set("")
         val part = File(dir, "${r.name}.part")
         val md = MessageDigest.getInstance("SHA-256")
         var total = 0L
@@ -96,12 +130,18 @@ object ApkUpdater {
             val info = archiveInfo(part.absolutePath) ?: throw OtaException("apk_unreadable")
             val mine = installedInfo()
             ApkCore.checkIdentity(app.packageName, info.packageName, code(mine), code(info), certs(mine), certs(info))
-            OtaManager.log("APK ${r.version}: size ok, ${if (expected != null) "sha256 ok" else "no checksum published"}, signature matches")
+            alog("APK ${r.version}: size ok, ${if (expected != null) "sha256 ok" else "no checksum published"}, signature matches")
             val fin = File(dir, r.name)
             if (!part.renameTo(fin)) throw IOException("rename")
             ready = fin; progress = 1f
+            AppSettings.apkPending.set("${r.version}\t${r.name}")
+            alog("APK ${r.version}: ready to install")
             return fin
-        } catch (e: Throwable) { part.delete(); File(dir, r.name).delete(); ready = null; progress = -1f; throw e }
+        } catch (e: Throwable) {
+            part.delete(); File(dir, r.name).delete(); ready = null; progress = -1f
+            alog("APK ${r.version}: rejected (${OtaManager.errorText(e)})")
+            throw e
+        }
     }
 
     fun canInstall(): Boolean = app.packageManager.canRequestPackageInstalls()
@@ -122,7 +162,9 @@ object ApkUpdater {
      * when this app is the installer of record and the update meets its conditions, otherwise it asks as usual).
      * Falls back to ACTION_VIEW + FileProvider if the session cannot be created.
      */
-    fun install(apk: File, silent: Boolean) {
+    fun install(apk: File, silent: Boolean, interactive: Boolean = false) {
+        if (interactive) lastInteractive = System.currentTimeMillis()
+        if (!canInstall()) { alog("APK install blocked: install permission missing"); notifyAction(app.getString(R.string.apk_notif_perm)); return }
         try {
             val pi = app.packageManager.packageInstaller
             val p = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
@@ -135,16 +177,17 @@ object ApkUpdater {
                     PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0))
                 s.commit(cb.intentSender)
             }
-            OtaManager.log("APK install session committed (${if (silent) "no-prompt requested" else "user confirmation"})")
+            alog("APK install session committed (${if (silent) "no-prompt requested" else "user confirmation"})")
         } catch (e: Throwable) {
-            OtaManager.log("PackageInstaller failed (${e.message}), falling back to system installer")
-            val view = viewIntent(apk)
-            try { app.startActivity(view) } catch (e2: Throwable) {
-                // background activity start is blocked on Android 10+: leave a tappable notification instead
-                OtaManager.notify(app.getString(R.string.apk_notif_ready, "") , 7002, view)
-            }
+            alog("PackageInstaller failed (${e.message}), falling back to system installer")
+            // A foreground tap may open the system installer; from the background only a notification is allowed.
+            if (interactive) { try { app.startActivity(viewIntent(apk)) } catch (e2: Throwable) { notifyAction(app.getString(R.string.apk_notif_ready, "")) } }
+            else notifyAction(app.getString(R.string.apk_notif_ready, ""))
         }
     }
+
+    /** Normal-importance notification whose tap opens the in-app install screen. */
+    private fun notifyAction(text: String) = OtaManager.notify(text, 7002, screenIntent(), important = true)
 
     /** Receives the PackageInstaller result: shows the system confirmation when the OS asks for it. */
     class ResultReceiver : BroadcastReceiver() {
@@ -153,16 +196,18 @@ object ApkUpdater {
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                     @Suppress("DEPRECATION") val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: return
                     confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    OtaManager.log("APK install needs your confirmation")
-                    // Starting from the background may be blocked by Android 10+, so also leave a notification.
-                    OtaManager.notify(context.getString(R.string.apk_notif_confirm), 7002, confirm)
-                    runCatching { context.startActivity(confirm) }
+                    alog("APK install needs your confirmation")
+                    // Never startActivity from the background (blocked on Android 10+): a tap on the notification
+                    // opens the confirmation. Only when the user just pressed install in the app do we open it directly.
+                    if (System.currentTimeMillis() - lastInteractive < 60_000L) runCatching { context.startActivity(confirm) }
+                    else OtaManager.notify(context.getString(R.string.apk_notif_confirm), 7002,
+                        Intent(confirm), important = true)
                 }
-                PackageInstaller.STATUS_SUCCESS -> OtaManager.log("APK installed")
+                PackageInstaller.STATUS_SUCCESS -> { alog("APK installed"); AppSettings.apkPending.set("") }
                 else -> {
                     val msg = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE).orEmpty()
-                    OtaManager.log("APK install failed: status $st $msg")
-                    OtaManager.notify(context.getString(R.string.apk_notif_failed, msg), 7002)
+                    alog("APK install failed: status $st $msg")
+                    OtaManager.notify(context.getString(R.string.apk_notif_failed, msg), 7002, screenIntent(), important = true)
                 }
             }
         }
@@ -175,28 +220,28 @@ object ApkUpdater {
         val now = System.currentTimeMillis()
         if (now - (AppSettings.apkLastCheck.value.toLongOrNull() ?: 0) < 6 * 3600_000L) return
         AppSettings.apkLastCheck.set(now.toString())
-        val r = try { check() } catch (e: Throwable) { OtaManager.log("APK check failed: ${e.message}"); return }
-        if (r == null) { OtaManager.log("APK: up to date (${BuildConfig.VERSION_NAME})"); return }
+        val r = try { check() } catch (e: Throwable) { alog("APK check failed: ${e.message}"); return }
+        if (r == null) { alog("APK: up to date (${BuildConfig.VERSION_NAME})"); return }
         if (!ApkCore.downloads(mode)) {
             if (AppSettings.apkNotified.value != r.version) {
                 AppSettings.apkNotified.set(r.version)
-                OtaManager.log("APK ${r.version} available")
+                alog("APK ${r.version} available")
                 OtaManager.notify(app.getString(R.string.apk_notif_available, r.version), 7002)
             }
             return
         }
         try {
             val f = download(r)
-            if (mode == "auto" && canInstall()) { install(f, silent = true) }
+            if (mode == "auto") install(f, silent = true)
             else {
-                OtaManager.log("APK ${r.version} downloaded; open Settings > Updates to install")
-                // tap installs: system installer for the file, or the "unknown sources" screen when not allowed yet
-                OtaManager.notify(app.getString(R.string.apk_notif_ready, r.version), 7002,
-                    if (canInstall()) viewIntent(f) else unknownSourcesIntent())
+                alog("APK ${r.version} downloaded; waiting for the install tap")
+                notifyAction(app.getString(R.string.apk_notif_ready, r.version))
             }
         } catch (e: Throwable) {
-            OtaManager.log("APK ${r.version} rejected: ${OtaManager.errorText(e)}")
-            OtaManager.notify(app.getString(R.string.apk_notif_rejected, r.version), 7002)
+            alog("APK ${r.version} not installed: ${OtaManager.errorText(e)}")
+            OtaManager.notify(
+                if ((e as? OtaException)?.code == "apk_perm") app.getString(R.string.apk_notif_perm) else app.getString(R.string.apk_notif_rejected, r.version),
+                7002, screenIntent(), important = true)
         }
     }
 }

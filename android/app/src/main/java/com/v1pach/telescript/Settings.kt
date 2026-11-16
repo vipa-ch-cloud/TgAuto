@@ -83,6 +83,10 @@ object AppSettings {
     val apkMode = Pref("apk_update_mode", "notify")
     val apkLastCheck = Pref("apk_last_check", "0")
     val apkNotified = Pref("apk_notified", "")
+    /** A downloaded and verified APK waiting for install: "version<TAB>file name" (empty = none). Survives restarts. */
+    val apkPending = Pref("apk_pending", "")
+    /** Log of the last APK update attempts (download, verification, install), newest last. */
+    val apkAttemptLog = Pref("apk_attempt_log", "")
     val otaLastCheck = Pref("ota_last_check", "0")
     val otaNotified = Pref("ota_notified", "")
     /** .tgadex plugin: apply automatically (official key only). Default OFF: it is executable code. */

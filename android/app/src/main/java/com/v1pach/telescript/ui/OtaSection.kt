@@ -75,6 +75,43 @@ fun OtaSection() {
         dismissButton = { TextButton({ confirmReset = false }) { Text(stringResource(R.string.ota_cancel)) } })
 }
 
+/** "Ready to install" state of a downloaded and verified APK, the permission state and the log of the last attempt. Shared by Settings and the install screen. */
+@Composable
+fun ApkReadyCard() {
+    val context = LocalContext.current
+    val raw by AppSettings.apkPending.flow.collectAsStateWithLifecycle()
+    val log by AppSettings.apkAttemptLog.flow.collectAsStateWithLifecycle()
+    var canInstall by remember { mutableStateOf(ApkUpdater.canInstall()) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) canInstall = ApkUpdater.canInstall() }
+        lifecycle.addObserver(ob); onDispose { lifecycle.removeObserver(ob) }
+    }
+    // re-verified off the main thread: the file may be gone, replaced or already installed
+    val pending by produceState<ApkUpdater.Pending?>(null, raw) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { ApkUpdater.pending() } }
+    var status by remember { mutableStateOf("") }
+    AppSectionCard {
+        SectionHeader(Icons.Default.SystemUpdate, stringResource(R.string.apk_ready_title))
+        val p = pending
+        if (p == null) Hint(stringResource(R.string.apk_none_ready))
+        else {
+            Hint(stringResource(R.string.apk_ready, p.version), MaterialTheme.colorScheme.primary)
+            if (!canInstall) {
+                Hint(stringResource(R.string.apk_need_perm), MaterialTheme.colorScheme.error)
+                BigButton(stringResource(R.string.apk_open_perm), Icons.Default.Settings, onClick = { context.startActivity(ApkUpdater.unknownSourcesIntent()) })
+            } else BigButton(stringResource(R.string.apk_install_btn, p.version), Icons.Default.SystemUpdate, onClick = {
+                status = Str.get(R.string.apk_installing)
+                Thread({ ApkUpdater.install(p.file, silent = false, interactive = true) }, "apk-install").start()
+            })
+        }
+        if (status.isNotEmpty()) Hint(status)
+        if (log.isNotBlank()) {
+            Hint(stringResource(R.string.apk_log_title))
+            Hint(log.lines().takeLast(8).joinToString("\n"))
+        }
+    }
+}
+
 @Composable
 fun ApkUpdateSection() {
     val context = LocalContext.current
@@ -84,6 +121,7 @@ fun ApkUpdateSection() {
     var found by remember { mutableStateOf<ApkRelease?>(null) }
     var pct by remember { mutableIntStateOf(-1) }
     var needPerm by remember { mutableStateOf(false) }
+    ApkReadyCard()
     AppSectionCard {
         SectionHeader(Icons.Default.Android, stringResource(R.string.apk_title))
         Hint(stringResource(R.string.apk_hint, BuildConfig.FLAVOR))
@@ -111,9 +149,9 @@ fun ApkUpdateSection() {
                 Thread({
                     status = try {
                         val f = ApkUpdater.download(r) { pct = (it * 100).toInt() }
-                        ApkUpdater.install(f, silent = AppSettings.apkMode.value == "auto")
+                        ApkUpdater.install(f, silent = AppSettings.apkMode.value == "auto", interactive = true)
                         Str.get(R.string.apk_installing)
-                    } catch (e: Throwable) { OtaManager.errorText(e) }
+                    } catch (e: Throwable) { if ((e as? OtaException)?.code == "apk_perm") needPerm = true; OtaManager.errorText(e) }
                     pct = -1; busy = false
                 }, "apk-install").start()
             })
