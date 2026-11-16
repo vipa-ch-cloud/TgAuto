@@ -7,13 +7,14 @@ plugins {
 android {
     namespace = "com.v1pach.telescript"
     compileSdk = 37
+    buildToolsVersion = "37.0.0"
 
     defaultConfig {
         applicationId = "com.v1pach.telescript"
         minSdk = 26
         targetSdk = 37
-        versionCode = 25
-        versionName = "1.9.5"
+        versionCode = 26
+        versionName = "1.9.6"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
