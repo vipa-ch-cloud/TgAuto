@@ -38,6 +38,13 @@ object DexManager {
         app = context.applicationContext
         root.mkdirs()
         runCatching { bootGuard() }.onFailure { rolledBack = "guard: ${it.message}"; runCatching { dropAll() } }
+        runCatching {
+            val f = RemoteFlags.cached()
+            val v = installedVersion().orEmpty()
+            if (current() != null && (f.on("dex_kill") || v in f.revoked("revoked_dex"))) {
+                rolledBack = "remote: $v"; dropAll(); OtaManager.log("Plugin $v removed by a remote flag")
+            }
+        }
     }
 
     // ---- pointers / boot guard (same scheme as OtaManager) ----
@@ -206,7 +213,7 @@ object DexManager {
 
     /** Launch-time check (at most every 6 h). Auto-applies only official-signed packages, only when the setting is on. */
     fun autoCheck() {
-        if (!AppSettings.otaAutoCheck.value) return
+        if (!AppSettings.otaAutoCheck.value || RemoteFlags.dexPaused()) return
         val now = System.currentTimeMillis()
         if (now - (AppSettings.dexLastCheck.value.toLongOrNull() ?: 0) < 6 * 3600_000L) return
         AppSettings.dexLastCheck.set(now.toString())

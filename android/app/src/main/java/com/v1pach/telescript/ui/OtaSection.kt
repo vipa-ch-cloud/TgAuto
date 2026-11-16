@@ -44,6 +44,7 @@ fun OtaSection() {
         SectionHeader(Icons.Default.SystemUpdate, stringResource(R.string.ota_title))
         Hint(stringResource(R.string.ota_base_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, BuildConfig.FLAVOR))
         Hint(stringResource(R.string.ota_current, otaVersion ?: stringResource(R.string.ota_none)))
+        RemoteFlags.cached().message(Str.isRu()).takeIf { it.isNotBlank() }?.let { Hint(it, MaterialTheme.colorScheme.error) }
         OtaManager.rolledBack.takeIf { it.isNotEmpty() }?.let { Hint(stringResource(R.string.ota_rolled_back, it), MaterialTheme.colorScheme.error) }
         BigButton(stringResource(R.string.ota_from_file), Icons.Default.FileOpen, onClick = { picker.launch(arrayOf("*/*")) })
         BigButton(stringResource(R.string.ota_check), Icons.Default.CloudDownload, loading = busy, onClick = {

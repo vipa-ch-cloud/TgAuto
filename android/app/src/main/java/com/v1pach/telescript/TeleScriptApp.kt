@@ -26,6 +26,7 @@ class TeleScriptApp : Application() {
         // Warm up Python (log routing, telethon import) off the main thread.
         Thread({
             if (runCatching { Py.host }.isSuccess) OtaManager.confirmBoot()
+            runCatching { com.v1pach.telescript.ota.RemoteFlags.refresh() }
             runCatching { OtaManager.autoCheck() }
             runCatching { com.v1pach.telescript.ota.DexManager.autoCheck() }
             runCatching { com.v1pach.telescript.ota.ApkUpdater.autoCheck() }

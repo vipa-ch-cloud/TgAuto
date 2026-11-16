@@ -248,7 +248,7 @@ object StoreManager {
     }
 
     fun autoCheck() {
-        if (!AppSettings.storeAutoUpdate.value) return
+        if (!AppSettings.storeAutoUpdate.value || com.v1pach.telescript.ota.RemoteFlags.storePaused()) return
         val now = System.currentTimeMillis()
         if (now - (AppSettings.storeLastCheck.value.toLongOrNull() ?: 0) < 6 * 3600_000L) return
         AppSettings.storeLastCheck.set(now.toString())

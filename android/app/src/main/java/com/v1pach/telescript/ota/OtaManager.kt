@@ -41,6 +41,7 @@ object OtaManager {
         app = context.applicationContext
         root.mkdirs()
         runCatching { bootGuard() }.onFailure { rolledBack = "guard: ${it.message}"; runCatching { dropAll() } }
+        runCatching { applyRemoteFlags() }
         loadStrings()
     }
 
@@ -74,6 +75,17 @@ object OtaManager {
         }
         val now = current() ?: return
         bootFile.writeText(JSONObject().put("pending", true).put("fails", fails).put("version", now).toString())
+    }
+
+    /** Cached signed flags: the kill-switch drops the overlay, a revoked overlay version is rolled back (also offline). */
+    private fun applyRemoteFlags() {
+        val f = RemoteFlags.cached()
+        val cur = current() ?: return
+        val ver = manifestOf(cur)?.optString("version").orEmpty()
+        when {
+            f.on("ota_kill") -> { rolledBack = "kill-switch: $ver"; dropAll(); bootFile.delete(); log("Remote kill-switch: overlay $ver removed, built-in code active") }
+            ver in f.revoked("revoked_ota") -> { rolledBack = "revoked: $ver"; rollback(); log("Overlay $ver was revoked remotely and rolled back") }
+        }
     }
 
     /** Called once the Python layer imported and initialised successfully. */
@@ -265,11 +277,13 @@ object OtaManager {
      */
     fun autoCheck() {
         if (!AppSettings.otaAutoCheck.value) return
+        if (RemoteFlags.otaPaused()) { log("OTA: paused by a remote flag"); return }
         val now = System.currentTimeMillis()
         if (now - (AppSettings.otaLastCheck.value.toLongOrNull() ?: 0) < 6 * 3600_000L) return
         AppSettings.otaLastCheck.set(now.toString())
         val r = try { checkGithub() } catch (e: Throwable) { log("OTA check failed: ${e.message}"); return }
         if (r == null) { log("OTA: up to date (${installedVersion()})"); return }
+        if (r.version in RemoteFlags.cached().revoked("revoked_ota")) { log("OTA ${r.version}: revoked remotely, skipped"); return }
         if (AppSettings.otaAutoApply.value) {
             try {
                 val name = install(verifyOfficial(download(r.url)))

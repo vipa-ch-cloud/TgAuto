@@ -217,11 +217,13 @@ object ApkUpdater {
     fun autoCheck() {
         val mode = AppSettings.apkMode.value
         if (mode == "off") return
+        if (RemoteFlags.apkPaused()) { alog("APK: paused by a remote flag"); return }
         val now = System.currentTimeMillis()
         if (now - (AppSettings.apkLastCheck.value.toLongOrNull() ?: 0) < 6 * 3600_000L) return
         AppSettings.apkLastCheck.set(now.toString())
         val r = try { check() } catch (e: Throwable) { alog("APK check failed: ${e.message}"); return }
         if (r == null) { alog("APK: up to date (${BuildConfig.VERSION_NAME})"); return }
+        if (r.version in RemoteFlags.cached().revoked("revoked_apk")) { alog("APK ${r.version}: revoked remotely, skipped"); return }
         if (!ApkCore.downloads(mode)) {
             if (AppSettings.apkNotified.value != r.version) {
                 AppSettings.apkNotified.set(r.version)

@@ -84,6 +84,9 @@ object AppSettings {
     val apkLastCheck = Pref("apk_last_check", "0")
     val apkNotified = Pref("apk_notified", "")
     /** A downloaded and verified APK waiting for install: "version<TAB>file name" (empty = none). Survives restarts. */
+    /** Last verified remote flags JSON (see ota/RemoteFlags.kt) and the time of the last fetch. */
+    val remoteFlags = Pref("remote_flags", "")
+    val remoteFlagsCheck = Pref("remote_flags_check", "0")
     val apkPending = Pref("apk_pending", "")
     /** Log of the last APK update attempts (download, verification, install), newest last. */
     val apkAttemptLog = Pref("apk_attempt_log", "")
